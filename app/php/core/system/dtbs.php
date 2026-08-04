@@ -1,0 +1,3480 @@
+<?php
+include_once "app/php/core/partials/envloader.php";
+
+/**
+ * This is CTR-X database management page
+ * Where you can manage your entire database
+ * Made by CodeYro
+ * Modified date: July 21 2026
+ * 
+ * Added Multi-Database Support (MySQL, PostgreSQL, SQLite)
+ * Updated Export to use INSERT IGNORE / ON CONFLICT based on driver
+ * Added eye icon to show credentials modal
+ * Added pagination for table data (Next button for next 100 records)
+ */
+
+$dbname = env("database");
+if (!$dbname) {
+    die("❌ No Database found @ .env");
+}
+$host = env('dbhost');
+define('DB_NAME', $dbname);
+define('DB_USER', env('dbuser'));
+define('DB_PASS', env('dbpass'));
+define('DB_CHARSET', env('dbcharset'));
+$port = env('dbport') ?? "3306";
+global $driver;
+$driver = env("dbdriver") ?? "mysql";
+
+$driver = strtolower($driver);
+
+function getDBConnection($driver, $host, $port, $dbname, $charSet)
+{
+    try {
+        switch ($driver) {
+            case 'mysql':
+            case 'mariadb':
+                $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charSet;";
+                break;
+            case 'pgsql':
+            case 'postgres':
+            case 'postgresql':
+                $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;";
+                break;
+            case 'sqlite':
+                $dsn = "sqlite:" . $dbname;
+                break;
+            default:
+                throw new Exception("Unsupported database driver: $driver");
+        }
+
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]);
+        return $pdo;
+    } catch (PDOException $e) {
+        die(json_encode(['success' => false, 'message' => 'Database connection failed: ' . $e->getMessage()]));
+    }
+}
+
+function isPostgres()
+{
+    global $driver;
+    return in_array($driver, ['pgsql', 'postgres', 'postgresql']);
+}
+
+function isSqlite()
+{
+    global $driver;
+    return $driver === 'sqlite';
+}
+
+function isMysql()
+{
+    global $driver;
+    return in_array($driver, ['mysql', 'mariadb']);
+}
+
+function quoteIdentifier($identifier)
+{
+    global $driver;
+    $identifier = trim($identifier, '`"');
+    if (isMysql()) {
+        return "`$identifier`";
+    } else {
+        return "\"$identifier\"";
+    }
+}
+
+function executeQuery($pdo, $sql, $params = [])
+{
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return ['success' => true, 'data' => $stmt];
+    } catch (PDOException $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+function getTables($pdo)
+{
+    global $driver;
+
+    if (isMysql()) {
+        $sql = "SHOW TABLES";
+    } elseif (isPostgres()) {
+        $sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
+    } else {
+        $sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+    }
+
+    $result = executeQuery($pdo, $sql);
+    if (!$result['success']) return $result;
+
+    $tables = [];
+    while ($row = $result['data']->fetch()) {
+        $tables[] = reset($row);
+    }
+    return ['success' => true, 'data' => $tables];
+}
+
+function getTableInfo($pdo, $table)
+{
+    global $driver;
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+
+    if (isMysql()) {
+        $result = executeQuery($pdo, "SHOW FULL COLUMNS FROM $quoted");
+        if (!$result['success']) return $result;
+        $columns = [];
+        while ($row = $result['data']->fetch()) {
+            $columns[] = $row;
+        }
+
+        $keyResult = executeQuery($pdo, "SHOW INDEXES FROM $quoted");
+        $keys = ['PRIMARY' => [], 'UNIQUE' => []];
+        if ($keyResult['success']) {
+            while ($row = $keyResult['data']->fetch()) {
+                if ($row['Key_name'] == 'PRIMARY') {
+                    $keys['PRIMARY'][] = $row['Column_name'];
+                } elseif ($row['Non_unique'] == 0) {
+                    $keys['UNIQUE'][$row['Key_name']][] = $row['Column_name'];
+                }
+            }
+        }
+        return ['success' => true, 'data' => ['columns' => $columns, 'keys' => $keys]];
+    } elseif (isPostgres()) {
+        $sql = "SELECT 
+                    column_name as Field,
+                    data_type as Type,
+                    is_nullable as Null,
+                    column_default as Default,
+                    '' as Extra
+                FROM information_schema.columns 
+                WHERE table_name = ?";
+        $result = executeQuery($pdo, $sql, [$table]);
+        if (!$result['success']) return $result;
+
+        $columns = [];
+        while ($row = $result['data']->fetch()) {
+            $row['Type'] = $row['type'];
+            $row['Null'] = $row['null'] == 'YES' ? 'YES' : 'NO';
+            $row['Default'] = $row['default'] ?? null;
+            $row['Extra'] = '';
+
+            $pkCheck = executeQuery($pdo, "
+                SELECT a.attname
+                FROM pg_index i
+                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                WHERE i.indrelid = ?::regclass AND i.indisprimary
+            ", [$table]);
+            if ($pkCheck['success'] && $pkCheck['data']->rowCount() > 0) {
+                $pkRow = $pkCheck['data']->fetch();
+                if ($pkRow['attname'] == $row['field']) {
+                    $row['Key'] = 'PRI';
+                }
+            }
+
+            $columns[] = $row;
+        }
+
+        $keys = ['PRIMARY' => [], 'UNIQUE' => []];
+        $keyResult = executeQuery($pdo, "
+            SELECT 
+                i.relname as Key_name,
+                a.attname as Column_name,
+                i.indisprimary as is_primary,
+                i.indisunique as is_unique
+            FROM pg_index i
+            JOIN pg_class c ON c.oid = i.indrelid
+            JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey)
+            WHERE c.relname = ?
+        ", [$table]);
+
+        if ($keyResult['success']) {
+            while ($row = $keyResult['data']->fetch()) {
+                if ($row['is_primary']) {
+                    $keys['PRIMARY'][] = $row['column_name'];
+                } elseif ($row['is_unique']) {
+                    $keys['UNIQUE'][$row['key_name']][] = $row['column_name'];
+                }
+            }
+        }
+
+        return ['success' => true, 'data' => ['columns' => $columns, 'keys' => $keys]];
+    } else {
+        $result = executeQuery($pdo, "PRAGMA table_info($quoted)");
+        if (!$result['success']) return $result;
+
+        $columns = [];
+        while ($row = $result['data']->fetch()) {
+            $columns[] = [
+                'Field' => $row['name'],
+                'Type' => $row['type'],
+                'Null' => $row['notnull'] ? 'NO' : 'YES',
+                'Key' => $row['pk'] ? 'PRI' : '',
+                'Default' => $row['dflt_value'],
+                'Extra' => ''
+            ];
+        }
+
+        $keys = ['PRIMARY' => [], 'UNIQUE' => []];
+
+        return ['success' => true, 'data' => ['columns' => $columns, 'keys' => $keys]];
+    }
+}
+
+function getTableData($pdo, $table, $limit = 100, $offset = 0)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+
+    $countResult = executeQuery($pdo, "SELECT COUNT(*) as total FROM $quoted");
+    if (!$countResult['success']) return $countResult;
+    $totalCount = $countResult['data']->fetch()['total'];
+
+    if ($offset >= $totalCount) {
+        return ['success' => true, 'data' => [], 'total' => $totalCount];
+    }
+
+    $result = executeQuery($pdo, "SELECT * FROM $quoted LIMIT $limit OFFSET $offset");
+    if (!$result['success']) return $result;
+    $data = [];
+    while ($row = $result['data']->fetch()) {
+        $data[] = $row;
+    }
+    return ['success' => true, 'data' => $data, 'total' => $totalCount];
+}
+
+function createTable($pdo, $tableName, $columnDefs)
+{
+    $tableName = preg_replace('/[^a-zA-Z0-9_]/', '', $tableName);
+    $quoted = quoteIdentifier($tableName);
+    $sql = "CREATE TABLE $quoted ($columnDefs)";
+    $result = executeQuery($pdo, $sql);
+    return $result;
+}
+
+function dropTable($pdo, $table)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+    $result = executeQuery($pdo, "DROP TABLE $quoted");
+    return $result;
+}
+
+function renameTable($pdo, $oldName, $newName)
+{
+    $oldName = preg_replace('/[^a-zA-Z0-9_]/', '', $oldName);
+    $newName = preg_replace('/[^a-zA-Z0-9_]/', '', $newName);
+    $quotedOld = quoteIdentifier($oldName);
+    $quotedNew = quoteIdentifier($newName);
+    $result = executeQuery($pdo, "ALTER TABLE $quotedOld RENAME TO $quotedNew");
+    return $result;
+}
+
+function addColumn($pdo, $table, $columnDef)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+    $result = executeQuery($pdo, "ALTER TABLE $quoted ADD COLUMN $columnDef");
+    return $result;
+}
+
+function removeColumn($pdo, $table, $columnName)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $columnName = preg_replace('/[^a-zA-Z0-9_]/', '', $columnName);
+    $quoted = quoteIdentifier($table);
+    $quotedCol = quoteIdentifier($columnName);
+
+    if (isSqlite()) {
+        return ['success' => false, 'message' => 'SQLite does not support DROP COLUMN. Please recreate the table.'];
+    }
+
+    $result = executeQuery($pdo, "ALTER TABLE $quoted DROP COLUMN $quotedCol");
+    return $result;
+}
+
+function renameColumn($pdo, $table, $oldName, $newName)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $oldName = preg_replace('/[^a-zA-Z0-9_]/', '', $oldName);
+    $newName = preg_replace('/[^a-zA-Z0-9_]/', '', $newName);
+    $quoted = quoteIdentifier($table);
+    $quotedOld = quoteIdentifier($oldName);
+    $quotedNew = quoteIdentifier($newName);
+
+    if (isPostgres()) {
+        $sql = "ALTER TABLE $quoted RENAME COLUMN $quotedOld TO $quotedNew";
+        return executeQuery($pdo, $sql);
+    } elseif (isSqlite()) {
+        return ['success' => false, 'message' => 'SQLite does not support RENAME COLUMN directly. Please recreate the table.'];
+    } else {
+        $info = getTableInfo($pdo, $table);
+        if (!$info['success']) return $info;
+        $col = null;
+        foreach ($info['data']['columns'] as $c) {
+            if ($c['Field'] == $oldName) {
+                $col = $c;
+                break;
+            }
+        }
+        if (!$col) {
+            return ['success' => false, 'message' => 'Column not found'];
+        }
+        $type = $col['Type'];
+        $null = $col['Null'] == 'YES' ? '' : 'NOT NULL';
+        $default = $col['Default'] !== null ? "DEFAULT '" . addslashes($col['Default']) . "'" : '';
+        $extra = $col['Extra'] ? $col['Extra'] : '';
+        $sql = "ALTER TABLE $quoted CHANGE $quotedOld $quotedNew $type $null $default $extra";
+        return executeQuery($pdo, $sql);
+    }
+}
+
+function modifyColumn($pdo, $table, $columnName, $newDef)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $columnName = preg_replace('/[^a-zA-Z0-9_]/', '', $columnName);
+    $quoted = quoteIdentifier($table);
+    $quotedCol = quoteIdentifier($columnName);
+
+    if (isMysql()) {
+        $sql = "ALTER TABLE $quoted MODIFY $quotedCol $newDef";
+    } elseif (isPostgres()) {
+        $sql = "ALTER TABLE $quoted ALTER COLUMN $quotedCol TYPE $newDef";
+    } else {
+        return ['success' => false, 'message' => 'SQLite does not support MODIFY COLUMN directly. Please recreate the table.'];
+    }
+    return executeQuery($pdo, $sql);
+}
+
+function setPrimaryKey($pdo, $table, $column)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+    $quoted = quoteIdentifier($table);
+    $quotedCol = quoteIdentifier($column);
+    $result = executeQuery($pdo, "ALTER TABLE $quoted ADD PRIMARY KEY ($quotedCol)");
+    return $result;
+}
+
+function setUniqueKey($pdo, $table, $column)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+    $quoted = quoteIdentifier($table);
+    $quotedCol = quoteIdentifier($column);
+    $result = executeQuery($pdo, "ALTER TABLE $quoted ADD UNIQUE ($quotedCol)");
+    return $result;
+}
+
+function dropKey($pdo, $table, $keyName)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+
+    if (strtoupper($keyName) == 'PRIMARY') {
+        if (isPostgres() || isSqlite()) {
+            $result = executeQuery($pdo, "ALTER TABLE $quoted DROP CONSTRAINT {$table}_pkey");
+        } else {
+            $result = executeQuery($pdo, "ALTER TABLE $quoted DROP PRIMARY KEY");
+        }
+    } else {
+        $keyName = preg_replace('/[^a-zA-Z0-9_]/', '', $keyName);
+        if (isPostgres()) {
+            $result = executeQuery($pdo, "ALTER TABLE $quoted DROP CONSTRAINT $keyName");
+        } else {
+            $quotedKey = quoteIdentifier($keyName);
+            $result = executeQuery($pdo, "ALTER TABLE $quoted DROP INDEX $quotedKey");
+        }
+    }
+    return $result;
+}
+
+function insertRow($pdo, $table, $data)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+    $columns = array_keys($data);
+    $quotedColumns = array_map('quoteIdentifier', $columns);
+    $placeholders = array_fill(0, count($columns), '?');
+    $sql = "INSERT INTO $quoted (" . implode(', ', $quotedColumns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+
+    if (isPostgres()) {
+        $sql .= " RETURNING *";
+    }
+
+    $result = executeQuery($pdo, $sql, array_values($data));
+    return $result;
+}
+
+function updateRow($pdo, $table, $data, $where, $whereValue)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $where = preg_replace('/[^a-zA-Z0-9_]/', '', $where);
+    $quoted = quoteIdentifier($table);
+    $quotedWhere = quoteIdentifier($where);
+
+    $sets = [];
+    $params = [];
+    foreach ($data as $col => $val) {
+        $col = preg_replace('/[^a-zA-Z0-9_]/', '', $col);
+        $quotedCol = quoteIdentifier($col);
+        $sets[] = "$quotedCol = ?";
+        $params[] = $val;
+    }
+    $params[] = $whereValue;
+    $sql = "UPDATE $quoted SET " . implode(', ', $sets) . " WHERE $quotedWhere = ?";
+    $result = executeQuery($pdo, $sql, $params);
+    return $result;
+}
+
+function deleteRow($pdo, $table, $where, $value)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $where = preg_replace('/[^a-zA-Z0-9_]/', '', $where);
+    $quoted = quoteIdentifier($table);
+    $quotedWhere = quoteIdentifier($where);
+    $result = executeQuery($pdo, "DELETE FROM $quoted WHERE $quotedWhere = ?", [$value]);
+    return $result;
+}
+
+function truncateTable($pdo, $table)
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $quoted = quoteIdentifier($table);
+
+    if (isPostgres()) {
+        $sql = "TRUNCATE TABLE $quoted RESTART IDENTITY";
+    } else {
+        $sql = "TRUNCATE TABLE $quoted";
+    }
+    $result = executeQuery($pdo, $sql);
+    return $result;
+}
+
+function exportDatabaseSQL($pdo, $tablesWithData = [])
+{
+    $tablesResult = getTables($pdo);
+    if (!$tablesResult['success']) {
+        return ['success' => false, 'message' => 'Failed to get tables'];
+    }
+
+    $allTables = $tablesResult['data'];
+    $sql = "-- ============================================\n";
+    $sql .= "-- Database Export By CTR-X\n";
+    $sql .= "-- Database: " . DB_NAME . "\n";
+    $sql .= "-- Driver: " . $GLOBALS['driver'] . "\n";
+    $sql .= "-- Export Date: " . date('Y-m-d H:i:s') . "\n";
+    $sql .= "-- ============================================\n\n";
+
+    if (!isSqlite()) {
+        $sql .= "-- CREATE DATABASE " . quoteIdentifier(DB_NAME) . ";\n";
+        $sql .= "-- USE " . quoteIdentifier(DB_NAME) . ";\n\n";
+    }
+
+    $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+
+    foreach ($allTables as $table) {
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        $quoted = quoteIdentifier($table);
+
+        if (isMysql()) {
+            $createResult = executeQuery($pdo, "SHOW CREATE TABLE $quoted");
+            if ($createResult['success']) {
+                $row = $createResult['data']->fetch();
+                $sql .= "-- Table structure for `$table`\n";
+                $sql .= "DROP TABLE IF EXISTS $quoted;\n";
+                $sql .= $row['Create Table'] . ";\n\n";
+            }
+        } elseif (isPostgres()) {
+            $sql .= "-- Table structure for \"$table\"\n";
+            $sql .= "DROP TABLE IF EXISTS $quoted CASCADE;\n";
+
+            $colResult = executeQuery($pdo, "
+                SELECT column_name, data_type, is_nullable, column_default
+                FROM information_schema.columns 
+                WHERE table_name = ?
+            ", [$table]);
+
+            if ($colResult['success']) {
+                $cols = [];
+                while ($row = $colResult['data']->fetch()) {
+                    $colDef = quoteIdentifier($row['column_name']) . " " . $row['data_type'];
+                    if ($row['is_nullable'] == 'NO') $colDef .= " NOT NULL";
+                    if ($row['column_default']) $colDef .= " DEFAULT " . $row['column_default'];
+                    $cols[] = $colDef;
+                }
+                $sql .= "CREATE TABLE $quoted (\n  " . implode(",\n  ", $cols) . "\n);\n\n";
+            }
+        } else {
+            $createResult = executeQuery($pdo, "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", [$table]);
+            if ($createResult['success'] && $createResult['data']->rowCount() > 0) {
+                $row = $createResult['data']->fetch();
+                $sql .= "-- Table structure for \"$table\"\n";
+                $sql .= "DROP TABLE IF EXISTS $quoted;\n";
+                $sql .= $row['sql'] . ";\n\n";
+            }
+        }
+
+        $includeData = in_array($table, $tablesWithData);
+
+        if ($includeData) {
+            $dataResult = executeQuery($pdo, "SELECT * FROM $quoted");
+            if ($dataResult['success']) {
+                $rows = $dataResult['data']->fetchAll();
+                if (count($rows) > 0) {
+                    $columns = array_keys($rows[0]);
+                    $escapedColumns = array_map('quoteIdentifier', $columns);
+                    $columnList = implode(', ', $escapedColumns);
+
+                    $sql .= "-- Dumping data for table `$table`\n";
+
+                    if (isPostgres()) {
+                        $sql .= "INSERT INTO $quoted ($columnList) VALUES\n";
+                    } else {
+                        $sql .= "INSERT IGNORE INTO $quoted ($columnList) VALUES\n";
+                    }
+
+                    $values = [];
+                    foreach ($rows as $row) {
+                        $escapedValues = array_map(function ($value) use ($pdo) {
+                            if ($value === null) {
+                                return 'NULL';
+                            }
+                            return $pdo->quote($value);
+                        }, array_values($row));
+                        $values[] = "(" . implode(', ', $escapedValues) . ")";
+                    }
+                    $sql .= implode(",\n", $values) . ";\n\n";
+                } else {
+                    $sql .= "-- No data for table `$table`\n\n";
+                }
+            }
+        } else {
+            $sql .= "-- Skipping data for table `$table` (structure only)\n\n";
+        }
+    }
+
+    $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+
+    return ['success' => true, 'sql' => $sql];
+}
+
+function importSQL($pdo, $sql, $isFile = false)
+{
+    if ($isFile) {
+        if (!isset($_FILES['sql_file']) || $_FILES['sql_file']['error'] !== UPLOAD_ERR_OK) {
+            return ['success' => false, 'message' => 'File upload failed'];
+        }
+        $sql = file_get_contents($_FILES['sql_file']['tmp_name']);
+        if ($sql === false) {
+            return ['success' => false, 'message' => 'Failed to read file content'];
+        }
+    }
+
+    $sql = trim($sql);
+    if (empty($sql)) {
+        return ['success' => false, 'message' => 'SQL is empty'];
+    }
+
+    $statements = [];
+    $current = '';
+    $inString = false;
+    $stringChar = '';
+    $len = strlen($sql);
+    for ($i = 0; $i < $len; $i++) {
+        $char = $sql[$i];
+        if ($inString) {
+            if ($char == '\\' && $i + 1 < $len) {
+                $current .= $char . $sql[++$i];
+                continue;
+            }
+            if ($char == $stringChar) {
+                $inString = false;
+                $stringChar = '';
+            }
+            $current .= $char;
+            continue;
+        }
+        if ($char == "'" || $char == '"') {
+            $inString = true;
+            $stringChar = $char;
+            $current .= $char;
+            continue;
+        }
+        if ($char == ';') {
+            $stmt = trim($current);
+            if (!empty($stmt)) {
+                $statements[] = $stmt;
+            }
+            $current = '';
+            continue;
+        }
+        $current .= $char;
+    }
+    $stmt = trim($current);
+    if (!empty($stmt)) {
+        $statements[] = $stmt;
+    }
+
+    if (empty($statements)) {
+        return ['success' => false, 'message' => 'No valid SQL statements found'];
+    }
+
+    $errors = [];
+    $successCount = 0;
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    foreach ($statements as $stmt) {
+        $stmt = trim($stmt);
+        if (empty($stmt)) continue;
+
+        try {
+            $pdo->exec($stmt);
+            $successCount++;
+        } catch (PDOException $e) {
+            $errors[] = "Error in statement: " . substr($stmt, 0, 100) . "... - " . $e->getMessage();
+        }
+    }
+
+    if ($successCount > 0 && empty($errors)) {
+        return ['success' => true, 'message' => "Import completed successfully. $successCount statements executed."];
+    } elseif ($successCount > 0 && !empty($errors)) {
+        return ['success' => true, 'message' => "Import completed with some errors. $successCount statements executed successfully. Errors: " . implode('; ', $errors)];
+    } else {
+        return ['success' => false, 'message' => 'Import failed. Errors: ' . implode('; ', $errors)];
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $pdo = getDBConnection($driver, $host, $port, $dbname, DB_CHARSET);
+    $action = $_POST['action'];
+    $response = ['success' => false, 'message' => 'Invalid action'];
+
+    try {
+        switch ($action) {
+            case 'getTables':
+                $response = getTables($pdo);
+                break;
+            case 'getTableInfo':
+                $response = getTableInfo($pdo, $_POST['table'] ?? '');
+                break;
+            case 'getTableData':
+                $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 100;
+                $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+                $response = getTableData($pdo, $_POST['table'] ?? '', $limit, $offset);
+                break;
+            case 'createTable':
+                $response = createTable($pdo, $_POST['tableName'] ?? '', $_POST['columns'] ?? '');
+                break;
+            case 'dropTable':
+                $response = dropTable($pdo, $_POST['table'] ?? '');
+                break;
+            case 'renameTable':
+                $response = renameTable($pdo, $_POST['oldName'] ?? '', $_POST['newName'] ?? '');
+                break;
+            case 'addColumn':
+                $response = addColumn($pdo, $_POST['table'] ?? '', $_POST['columnDef'] ?? '');
+                break;
+            case 'removeColumn':
+                $response = removeColumn($pdo, $_POST['table'] ?? '', $_POST['columnName'] ?? '');
+                break;
+            case 'renameColumn':
+                $response = renameColumn($pdo, $_POST['table'] ?? '', $_POST['oldName'] ?? '', $_POST['newName'] ?? '');
+                break;
+            case 'modifyColumn':
+                $response = modifyColumn($pdo, $_POST['table'] ?? '', $_POST['columnName'] ?? '', $_POST['newDef'] ?? '');
+                break;
+            case 'setPrimaryKey':
+                $response = setPrimaryKey($pdo, $_POST['table'] ?? '', $_POST['column'] ?? '');
+                break;
+            case 'setUniqueKey':
+                $response = setUniqueKey($pdo, $_POST['table'] ?? '', $_POST['column'] ?? '');
+                break;
+            case 'dropKey':
+                $response = dropKey($pdo, $_POST['table'] ?? '', $_POST['keyName'] ?? '');
+                break;
+            case 'insertRow':
+                $data = [];
+                $skipColumns = isset($_POST['skip_columns']) ? json_decode($_POST['skip_columns'], true) : [];
+                $skipColumns = $skipColumns ?? [];
+                foreach ($_POST as $key => $value) {
+                    if (strpos($key, 'col_') === 0) {
+                        $colName = substr($key, 4);
+                        if (!in_array($colName, $skipColumns)) {
+                            $data[$colName] = $value;
+                        }
+                    }
+                }
+                $response = insertRow($pdo, $_POST['table'] ?? '', $data);
+                break;
+            case 'updateRow':
+                $data = [];
+                $skipColumns = isset($_POST['skip_columns']) ? json_decode($_POST['skip_columns'] ?? [], true) : [];
+                $skipColumns = $skipColumns ?? [];
+                foreach ($_POST as $key => $value) {
+                    if (strpos($key, 'col_') === 0) {
+                        $colName = substr($key, 4);
+                        if (!in_array($colName, $skipColumns)) {
+                            $data[$colName] = $value;
+                        }
+                    }
+                }
+                $response = updateRow($pdo, $_POST['table'] ?? '', $data, $_POST['whereCol'] ?? '', $_POST['whereVal'] ?? '');
+                break;
+            case 'deleteRow':
+                $response = deleteRow($pdo, $_POST['table'] ?? '', $_POST['whereCol'] ?? '', $_POST['whereVal'] ?? '');
+                break;
+            case 'truncateTable':
+                $response = truncateTable($pdo, $_POST['table'] ?? '');
+                break;
+            case 'exportSQL':
+                $tablesWithData = isset($_POST['tables_with_data']) ? json_decode($_POST['tables_with_data'], true) : [];
+                $response = exportDatabaseSQL($pdo, $tablesWithData);
+                break;
+            case 'importSQL':
+                $isFile = isset($_POST['import_type']) && $_POST['import_type'] === 'file';
+                if ($isFile) {
+                    $response = importSQL($pdo, '', true);
+                } else {
+                    $sqlQuery = $_POST['sql_query'] ?? '';
+                    $response = importSQL($pdo, $sqlQuery, false);
+                }
+                break;
+        }
+    } catch (Exception $e) {
+        $response = ['success' => false, 'message' => $e->getMessage()];
+    }
+
+    if ($action === 'exportSQL' && $response['success']) {
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . DB_NAME . '_backup_' . date('Y-m-d_H-i-s') . '.sql"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        echo $response['sql'];
+        exit;
+    }
+
+    echo json_encode($response);
+    exit;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Manager - <?= $dbname ?></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .col-md-3 {
+            flex: 0 0 calc(25% - 15px);
+            min-width: 250px;
+        }
+
+        .col-md-9 {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .db-header {
+            border-left: 4px solid #0d6efd;
+            padding-left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .db-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .db-header h2 .text-primary {
+            color: #0d6efd;
+        }
+
+        .db-header small {
+            color: #6c757d;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            line-height: 1.5;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn-primary {
+            background: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+
+        .btn-primary:hover {
+            background: #0b5ed7;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #198754;
+            color: white;
+            border-color: #198754;
+        }
+
+        .btn-success:hover {
+            background: #157347;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #bb2d3b;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+            border-color: #ffc107;
+        }
+
+        .btn-warning:hover {
+            background: #ffca2c;
+        }
+
+        .btn-info {
+            background: #0dcaf0;
+            color: #212529;
+            border-color: #0dcaf0;
+        }
+
+        .btn-info:hover {
+            background: #31d2f2;
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        .btn-outline-primary:hover {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            background: transparent;
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-outline-danger {
+            background: transparent;
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-outline-danger:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-outline-warning {
+            background: transparent;
+            color: #ffc107;
+            border-color: #ffc107;
+        }
+
+        .btn-outline-warning:hover {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-outline-info {
+            background: transparent;
+            color: #0dcaf0;
+            border-color: #0dcaf0;
+        }
+
+        .btn-outline-info:hover {
+            background: #0dcaf0;
+            color: #212529;
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+
+        .mt-2 {
+            margin-top: 10px;
+        }
+
+        .mb-0 {
+            margin-bottom: 0;
+        }
+
+        .mb-2 {
+            margin-bottom: 10px;
+        }
+
+        .mb-3 {
+            margin-bottom: 15px;
+        }
+
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+
+        .mt-3 {
+            margin-top: 15px;
+        }
+
+        .mt-4 {
+            margin-top: 20px;
+        }
+
+        .me-2 {
+            margin-right: 10px;
+        }
+
+        .me-1 {
+            margin-right: 5px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h5 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .sidebar {
+            min-height: 500px;
+        }
+
+        .sidebar .card-header {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .table-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .table-list-item {
+            display: block;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .table-list-item:hover {
+            background: #f0f2f5;
+        }
+
+        .table-list-item.active {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .table-list-item .badge {
+            float: right;
+            background: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
+        .table-list-item.active .badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        table th {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 8px 10px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        table tbody tr:nth-child(even):hover {
+            background: #e9ecef;
+        }
+
+        .badge-key {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 3px;
+            margin-left: 4px;
+        }
+
+        .badge-key.bg-primary {
+            background: #0d6efd;
+            color: white;
+        }
+
+        .badge-key.bg-info {
+            background: #0dcaf0;
+            color: #212529;
+        }
+
+        .badge-key.bg-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .text-muted {
+            color: #6c757d;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-danger {
+            color: #dc3545;
+        }
+
+        .py-3 {
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .py-5 {
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+
+        .display-4 {
+            font-size: 48px;
+            font-weight: 300;
+        }
+
+        .d-block {
+            display: block;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background: #d1e7dd;
+            border-color: #badbcc;
+            color: #0f5132;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #f5c2c7;
+            color: #842029;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffecb5;
+            color: #664d03;
+        }
+
+        .alert-info {
+            background: #cff4fc;
+            border-color: #b6effb;
+            color: #055160;
+        }
+
+        .alert-dismissible {
+            position: relative;
+            padding-right: 40px;
+        }
+
+        .alert-dismissible .btn-close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.6;
+        }
+
+        .alert-dismissible .btn-close:hover {
+            opacity: 1;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 700px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-lg {
+            max-width: 800px;
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .modal-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-header .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.6;
+            padding: 0 8px;
+        }
+
+        .modal-header .btn-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            display: grid;
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+            background: white;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            transition: border-color 0.15s;
+        }
+
+        .form-control:focus {
+            border-color: #0d6efd;
+            outline: 0;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .input-group .form-control {
+            flex: 1;
+        }
+
+        .input-group .btn {
+            flex-shrink: 0;
+        }
+
+        .checkbox-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+            margin: 10px 0 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: background 0.15s;
+            cursor: pointer;
+        }
+
+        .checkbox-item:hover {
+            background: #e9ecef;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #0d6efd;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            margin: 0;
+            flex: 1;
+        }
+
+        .checkbox-item .table-count {
+            font-size: 11px;
+            color: #6c757d;
+        }
+
+        .select-all-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .select-all-container input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #0d6efd;
+        }
+
+        .select-all-container label {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 0;
+            color: #333;
+        }
+
+        .select-all-container .hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: auto;
+        }
+
+        .spinner-border {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner 0.75s linear infinite;
+        }
+
+        @keyframes spinner {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .btn-group .btn {
+            border-radius: 4px;
+        }
+
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+
+        .gap-2 {
+            gap: 8px;
+        }
+
+        .icon {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            margin-right: 4px;
+        }
+
+        .export-sql-btn {
+            margin-left: 10px;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 5px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 13px;
+            background: white;
+        }
+
+        .filter-bar select {
+            min-width: 140px;
+        }
+
+        .filter-bar input {
+            min-width: 180px;
+        }
+
+        .filter-bar .btn {
+            padding: 4px 14px;
+        }
+
+        .filter-bar .filter-label {
+            font-weight: 500;
+            font-size: 13px;
+            color: #495057;
+            margin-right: 2px;
+        }
+
+        .import-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .import-tab {
+            padding: 8px 20px;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6c757d;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .import-tab:hover {
+            background: #f0f2f5;
+        }
+
+        .import-tab.active {
+            color: #0d6efd;
+            border-bottom: 3px solid #0d6efd;
+            background: transparent;
+        }
+
+        .import-panel {
+            display: none;
+        }
+
+        .import-panel.active {
+            display: block;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+
+        .file-upload-area:hover {
+            border-color: #0d6efd;
+            background: #f8f9fa;
+        }
+
+        .file-upload-area input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-area .file-label {
+            cursor: pointer;
+            color: #0d6efd;
+            font-weight: 500;
+        }
+
+        .file-upload-area .file-label:hover {
+            text-decoration: underline;
+        }
+
+        .file-upload-area .file-info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .file-upload-area .file-selected {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .file-upload-area .file-selected.show {
+            display: block;
+        }
+
+        .field-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .field-row .form-label {
+            margin-bottom: 0;
+            min-width: 120px;
+            flex-shrink: 0;
+        }
+
+        .field-row .form-control {
+            flex: 1;
+        }
+
+        .field-row .skip-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .field-row .skip-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #dc3545;
+            cursor: pointer;
+        }
+
+        .field-row .skip-checkbox label {
+            font-size: 12px;
+            color: #6c757d;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .skip-checkbox.checked label {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .credential-item:last-child {
+            border-bottom: none;
+        }
+
+        .credential-item .label {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .credential-item .value {
+            color: #212529;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .eye-icon {
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.6;
+            transition: opacity 0.15s;
+            background: none;
+            border: none;
+            padding: 0 4px;
+        }
+
+        .eye-icon:hover {
+            opacity: 1;
+        }
+
+        .pagination-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-top: 1px solid #e9ecef;
+            margin-top: 10px;
+        }
+
+        .pagination-bar .info {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .credential-item:last-child {
+            border-bottom: none;
+        }
+
+        .credential-item .label {
+            font-weight: 500;
+            color: #495057;
+            min-width: 150px;
+        }
+
+        .credential-item .value {
+            color: #212529;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .credential-item .copy-btn {
+            padding: 2px 8px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .db-header-actions {
+                display: grid;
+                gap: 2px;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                align-items: center;
+                width: 100%;
+            }
+
+            .db-header-actions button {
+                width: 100%;
+            }
+
+            .col-md-3,
+            .col-md-9 {
+                flex: 0 0 100%;
+                min-width: 0;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .btn-group .btn {
+                font-size: 11px;
+                padding: 3px 6px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            table th,
+            table td {
+                padding: 4px 6px;
+            }
+
+            .export-sql-btn {
+                margin-left: 0;
+            }
+
+            .checkbox-list {
+                grid-template-columns: 1fr;
+                max-height: 200px;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-bar select,
+            .filter-bar input {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .import-tabs {
+                flex-wrap: wrap;
+            }
+
+            .import-tab {
+                flex: 1;
+                text-align: center;
+                font-size: 13px;
+                padding: 6px 10px;
+            }
+
+            .field-row {
+                flex-wrap: wrap;
+            }
+
+            .field-row .form-label {
+                min-width: 100%;
+            }
+
+            .field-row .skip-checkbox {
+                margin-left: auto;
+            }
+
+            .db-header {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="app">
+        <div class="header">
+            <div class="db-header">
+                <h2>
+                    <span class="icon"></span>CTRX DBMS</span>
+                    <button class="eye-icon" onclick="showCredentialsModal()" title="View Database Credentials">👁️</button>
+                </h2>
+
+            </div>
+
+            <div class="db-header-actions">
+                <button class="btn btn-success btn-sm export-sql-btn" onclick="showExportModal()">
+                    <span class="icon">💾</span> Export SQL
+                </button>
+                <button class="btn btn-info btn-sm" onclick="showImportModal()">
+                    <span class="icon">📥</span> Import SQL
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="refreshAll()">
+                    <span class="icon">🔄</span> Refresh
+                </button>
+                <a href="<?= prev_page ?>">
+                    <button class="btn btn-outline-secondary btn-sm">
+                        <span class="icon">🔙</span> Back
+                    </button>
+                </a>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card sidebar">
+                    <div class="card-header">
+                        <h5><span class="icon">📋</span>Tables</h5>
+                        <button class="btn btn-primary btn-sm" onclick="showCreateTableModal()">
+                            <span class="icon">➕</span> New
+                        </button>
+                    </div>
+                    <div id="tableList">
+                        <div class="text-center text-muted py-3">Loading tables...</div>
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <div>
+                        <button class="btn btn-outline-danger btn-sm w-100" onclick="dropTable()">
+                            <span class="icon">🗑️</span> Drop Table
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm w-100 mt-2" onclick="showRenameTableModal()">
+                            <span class="icon">✏️</span> Rename Table
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+                <div class="card main-content">
+                    <div id="tableContent">
+                        <div class="text-center text-muted py-5">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+                            <p>Select a table from the left to manage it</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="credentialsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">🔐</span>Database Credentials</h5>
+                <button class="btn-close" onclick="closeModal('credentialsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <?php
+                $actualPassword = env('dbpass');
+                $displayPassword = $actualPassword ? '••••••••' : '(empty)';
+                ?>
+                <div class="credential-item">
+                    <span class="label">HOST (dbhost)</span>
+                    <span class="value" id="cred_host"><?= env('dbhost') ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_host')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">PORT (dbport)</span>
+                    <span class="value" id="cred_port"><?= env('dbport') ?: '3306' ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_port')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">DATABASE (database)</span>
+                    <span class="value" id="cred_database"><?= env('database') ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_database')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">USER (dbuser)</span>
+                    <span class="value" id="cred_user"><?= env('dbuser') ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_user')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">PASSWORD (dbpass)</span>
+                    <span class="value" id="cred_password" data-actual="<?= htmlspecialchars($actualPassword) ?>"><?= $displayPassword ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_password')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">CHARSET (dbcharset)</span>
+                    <span class="value" id="cred_charset"><?= env('dbcharset') ?: 'utf8mb4' ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_charset')">📋</button>
+                </div>
+                <div class="credential-item">
+                    <span class="label">DRIVER (dbdriver)</span>
+                    <span class="value" id="cred_driver"><?= env('dbdriver') ?: 'mysql' ?></span>
+                    <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyCredential('cred_driver')">📋</button>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn btn-primary btn-sm" onclick="copyAllCredentials()">📋 Copy All Credentials</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('credentialsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">💾</span>Export Database as SQL</h5>
+                <button class="btn-close" onclick="closeModal('exportModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                    Select which tables should include data in the export.
+                    <strong>Unchecked tables will export structure only</strong> (no data).
+                </p>
+
+                <div class="select-all-container">
+                    <input type="checkbox" id="selectAllTables" onchange="toggleAllTables()">
+                    <label for="selectAllTables">Select All Tables</label>
+                    <span class="hint">Include data for all tables</span>
+                </div>
+
+                <div id="tableCheckboxList" class="checkbox-list">
+                </div>
+
+                <div style="margin-top: 10px; font-size: 13px; color: #6c757d;">
+                    <span id="selectedCount">0</span> tables selected to include data
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('exportModal')">Cancel</button>
+                <button class="btn btn-success" onclick="exportSQL()">
+                    <span class="icon">💾</span> Export SQL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="importModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h5><span class="icon">📥</span>Import SQL</h5>
+                <button class="btn-close" onclick="closeModal('importModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="import-tabs">
+                    <div class="import-tab active" data-tab="file" onclick="switchImportTab('file')">📁 Upload SQL File</div>
+                    <div class="import-tab" data-tab="paste" onclick="switchImportTab('paste')">📝 Paste Query</div>
+                </div>
+
+                <div class="import-panel active" id="importPanelFile">
+                    <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                        Upload a <strong>.sql</strong> file to import. The file can contain multiple statements separated by semicolons.
+                    </p>
+                    <div class="file-upload-area" id="fileDropArea">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📄</div>
+                        <p>
+                            <span class="file-label" onclick="document.getElementById('sqlFileInput').click()">
+                                Click to select a SQL file
+                            </span>
+                            or drag and drop here
+                        </p>
+                        <input type="file" id="sqlFileInput" accept=".sql,.txt" onchange="handleFileSelect(event)">
+                        <div class="file-info">Supported: .sql files</div>
+                        <div class="file-selected" id="fileSelectedInfo">
+                            📎 Selected: <span id="selectedFileName"></span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 13px; color: #6c757d;">
+                        <span id="importFileStatus">No file selected</span>
+                    </div>
+                </div>
+
+                <div class="import-panel" id="importPanelPaste">
+                    <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                        Paste your SQL query below. Multiple statements separated by semicolons are supported.
+                    </p>
+                    <textarea id="sqlPasteInput" class="form-control" rows="12" placeholder="-- Paste your SQL here
+            CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(100)
+            );
+            INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="importSQL()">
+                    <span class="icon">▶️</span> Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="createTableModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h5><span class="icon">➕</span>Create Table</h5>
+                <button class="btn-close" onclick="closeModal('createTableModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Table Name</label>
+                    <input id="newTableName" class="form-control" placeholder="e.g., products">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Column Definitions</label>
+                    <textarea id="newTableColumns" class="form-control" rows="6" placeholder="id INT PRIMARY KEY AUTO_INCREMENT,&#10;name VARCHAR(100) NOT NULL,&#10;price DECIMAL(10,2),&#10;created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"></textarea>
+                    <small class="text-muted">Separate columns with commas. Use standard MySQL column definitions.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createTableModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createTable()">Create Table</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addColumnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">➕</span>Add Column</h5>
+                <button class="btn-close" onclick="closeModal('addColumnModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Column Definition</label>
+                <input id="addColumnDef" class="form-control" placeholder="email VARCHAR(100) NOT NULL">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addColumnModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addColumn()">Add Column</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="removeColumnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">🗑️</span>Remove Column</h5>
+                <button class="btn-close" onclick="closeModal('removeColumnModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                    Select a column to remove from table <strong id="removeColumnTableName"></strong>.
+                    <span style="color: #dc3545;">⚠️ This action cannot be undone!</span>
+                </p>
+
+                <label class="form-label">Column Name</label>
+                <select id="removeColumnSelect" class="form-control">
+                    <option value="">— Select a column —</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('removeColumnModal')">Cancel</button>
+                <button class="btn btn-danger" onclick="removeColumn()">
+                    <span class="icon">🗑️</span> Remove Column
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="renameColumnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">✏️</span>Rename Column</h5>
+                <button class="btn-close" onclick="closeModal('renameColumnModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Current Column Name</label>
+                    <input id="renameOldCol" class="form-control" placeholder="old_column_name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">New Column Name</label>
+                    <input id="renameNewCol" class="form-control" placeholder="new_column_name">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('renameColumnModal')">Cancel</button>
+                <button class="btn btn-warning" onclick="renameColumn()">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modifyColumnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">⚙️</span>Modify Column</h5>
+                <button class="btn-close" onclick="closeModal('modifyColumnModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Column Name</label>
+                    <input id="modifyColName" class="form-control" placeholder="column_name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">New Definition</label>
+                    <input id="modifyColDef" class="form-control" placeholder="VARCHAR(255) NOT NULL">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modifyColumnModal')">Cancel</button>
+                <button class="btn btn-warning" onclick="modifyColumn()">Modify</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="keyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">🔑</span>Manage Keys</h5>
+                <button class="btn-close" onclick="closeModal('keyModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Set PRIMARY KEY</label>
+                    <div class="input-group">
+                        <input id="pkColumn" class="form-control" placeholder="column_name">
+                        <button class="btn btn-primary" onclick="setPrimaryKey()">Set</button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Set UNIQUE KEY</label>
+                    <div class="input-group">
+                        <input id="uniqueColumn" class="form-control" placeholder="column_name">
+                        <button class="btn btn-info" onclick="setUniqueKey()">Set</button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Drop Key</label>
+                    <div class="input-group">
+                        <input id="dropKeyName" class="form-control" placeholder="key_name (or PRIMARY)">
+                        <button class="btn btn-danger" onclick="dropKey()">Drop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="renameTableModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h5><span class="icon">✏️</span>Rename Table</h5>
+                <button class="btn-close" onclick="closeModal('renameTableModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">New Table Name</label>
+                <input id="renameTableName" class="form-control" placeholder="new_table_name">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('renameTableModal')">Cancel</button>
+                <button class="btn btn-warning" onclick="renameTable()">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="insertRowModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h5><span class="icon">➕</span>Insert Row</h5>
+                <button class="btn-close" onclick="closeModal('insertRowModal')">×</button>
+            </div>
+            <div class="modal-body" id="insertRowFields">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('insertRowModal')">Cancel</button>
+                <button class="btn btn-success" onclick="insertRow()">Insert</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editRowModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h5><span class="icon">✏️</span>Edit Row</h5>
+                <button class="btn-close" onclick="closeModal('editRowModal')">×</button>
+            </div>
+            <div class="modal-body" id="editRowFields">
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editRowModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateRow()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTable = null;
+        let currentColumns = [];
+        let currentKeys = [];
+        let tableData = [];
+        let allTableNames = [];
+        let selectedFile = null;
+        let currentPage = 0;
+        let totalRecords = 0;
+        const dataLimit = 100;
+        let filteredData = [];
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.remove('show');
+            }
+        });
+
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible`;
+            alert.innerHTML = `
+        ${message}
+        <button class="btn-close" onclick="this.parentElement.remove()">×</button>
+    `;
+            container.appendChild(alert);
+            setTimeout(() => {
+                if (alert.parentElement) alert.remove();
+            }, 5000);
+        }
+
+        function showLoading(element) {
+            if (!element) return;
+            element.classList.add('loading');
+            element.innerHTML = '<div class="text-center py-3"><span class="spinner-border"></span> Loading...</div>';
+        }
+
+        function hideLoading(element) {
+            if (!element) return;
+            element.classList.remove('loading');
+        }
+
+        function showCredentialsModal() {
+            openModal('credentialsModal');
+        }
+
+        async function apiRequest(action, data = {}) {
+            data.action = action;
+            const formData = new FormData();
+            for (const key in data) {
+                formData.append(key, data[key]);
+            }
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const contentType = response.headers.get('Content-Type');
+                if (contentType && contentType.includes('application/sql')) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '<?= $dbname ?>_backup_' + new Date().toISOString().slice(0, 19).replace(/[:-]/g, '_') + '.sql';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    return {
+                        success: true,
+                        message: 'SQL export started'
+                    };
+                }
+
+                const result = await response.json();
+                if (!result.success) {
+                    showAlert(result.message || 'Operation failed', 'danger');
+                }
+                return result;
+            } catch (error) {
+                showAlert('Network error: ' + error.message, 'danger');
+                return {
+                    success: false,
+                    message: error.message
+                };
+            }
+        }
+
+        async function showExportModal() {
+            if (allTableNames.length === 0) {
+                const result = await apiRequest('getTables');
+                if (result.success && result.data) {
+                    allTableNames = result.data;
+                } else {
+                    showAlert('Failed to load tables', 'danger');
+                    return;
+                }
+            }
+
+            const container = document.getElementById('tableCheckboxList');
+            if (allTableNames.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center">No tables found</div>';
+            } else {
+                document.querySelector("#selectAllTables").checked = false;
+                container.innerHTML = allTableNames.map(table => `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="table_${table}" value="${table}" onchange="updateSelectedCount()">
+                        <label for="table_${table}">${table}</label>
+                    </div>
+                `).join('');
+            }
+
+            updateSelectedCount();
+            openModal('exportModal');
+        }
+
+        function toggleAllTables() {
+            const checked = document.getElementById('selectAllTables').checked;
+            document.querySelectorAll('#tableCheckboxList input[type="checkbox"]').forEach(cb => {
+                cb.checked = checked;
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('#tableCheckboxList input[type="checkbox"]:checked').length;
+            document.getElementById('selectedCount').textContent = checked;
+        }
+
+        async function exportSQL() {
+            const selectedTables = [];
+            document.querySelectorAll('#tableCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+                selectedTables.push(cb.value);
+            });
+
+            if (selectedTables.length === 0) {
+                showAlert('Please select at least one table to include data', 'warning');
+                return;
+            }
+
+            closeModal('exportModal');
+
+            const btn = document.querySelector('.export-sql-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Exporting...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiRequest('exportSQL', {
+                    tables_with_data: JSON.stringify(selectedTables)
+                });
+                if (result.success) {
+                    showAlert('Database exported successfully!', 'success');
+                }
+            } catch (error) {
+                showAlert('Export failed: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function showImportModal() {
+            document.getElementById('sqlFileInput').value = '';
+            document.getElementById('fileSelectedInfo').classList.remove('show');
+            document.getElementById('selectedFileName').textContent = '';
+            document.getElementById('importFileStatus').textContent = 'No file selected';
+            document.getElementById('sqlPasteInput').value = '';
+            selectedFile = null;
+            openModal('importModal');
+        }
+
+        function switchImportTab(tab) {
+            document.querySelectorAll('.import-tab').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.import-tab[data-tab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.import-panel').forEach(el => el.classList.remove('active'));
+            document.getElementById(`importPanel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('selectedFileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) +
+                    ' KB)';
+                document.getElementById('fileSelectedInfo').classList.add('show');
+                document.getElementById('importFileStatus').textContent = '✅ File selected: ' + file.name;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('fileDropArea');
+            if (dropArea) {
+                dropArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#0d6efd';
+                    this.style.background = '#e9ecef';
+                });
+                dropArea.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#ced4da';
+                    this.style.background = '#fafbfc';
+                });
+                dropArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#ced4da';
+                    this.style.background = '#fafbfc';
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.name.endsWith('.sql') || file.name.endsWith('.txt')) {
+                            selectedFile = file;
+                            document.getElementById('sqlFileInput').files = files;
+                            document.getElementById('selectedFileName').textContent = file.name + ' (' + (file
+                                .size / 1024).toFixed(1) + ' KB)';
+                            document.getElementById('fileSelectedInfo').classList.add('show');
+                            document.getElementById('importFileStatus').textContent = '✅ File selected: ' + file
+                                .name;
+                        } else {
+                            showAlert('Please select a .sql file', 'warning');
+                        }
+                    }
+                });
+            }
+        });
+
+        async function importSQL() {
+            const activeTab = document.querySelector('.import-tab.active');
+            const tabType = activeTab ? activeTab.dataset.tab : 'file';
+
+            const btn = document.querySelector('#importModal .modal-footer .btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Importing...';
+            btn.disabled = true;
+
+            try {
+                let result;
+
+                if (tabType === 'file') {
+                    if (!selectedFile) {
+                        showAlert('Please select a SQL file to import', 'warning');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('action', 'importSQL');
+                    formData.append('import_type', 'file');
+                    formData.append('sql_file', selectedFile);
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    result = await response.json();
+
+                } else {
+                    const query = document.getElementById('sqlPasteInput').value.trim();
+                    if (!query) {
+                        showAlert('Please paste a SQL query to import', 'warning');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        return;
+                    }
+                    result = await apiRequest('importSQL', {
+                        import_type: 'paste',
+                        sql_query: query
+                    });
+                }
+
+                if (result.success) {
+                    showAlert(result.message || 'Import completed successfully!', 'success');
+                    closeModal('importModal');
+                    await loadTables();
+                    if (currentTable) {
+                        await loadTableInfo();
+                        await loadTableData();
+                    } else {
+                        await loadTables();
+                    }
+                } else {
+                    showAlert(result.message || 'Import failed', 'danger');
+                }
+            } catch (error) {
+                showAlert('Import error: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function showRemoveColumnModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+
+            if (!currentColumns.length) {
+                showAlert('No columns found in this table', 'warning');
+                return;
+            }
+
+            document.getElementById('removeColumnTableName').textContent = currentTable;
+
+            const select = document.getElementById('removeColumnSelect');
+            select.innerHTML = '<option value="">— Select a column —</option>';
+
+            currentColumns.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col.Field;
+                option.textContent = col.Field + ' (' + col.Type + ')';
+                select.appendChild(option);
+            });
+
+            openModal('removeColumnModal');
+        }
+
+        async function removeColumn() {
+            const select = document.getElementById('removeColumnSelect');
+            const columnName = select.value.trim();
+
+            if (!columnName) {
+                showAlert('Please select a column to remove', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to remove column "${columnName}" from table "${currentTable}"? This cannot be undone!`)) {
+                return;
+            }
+
+            const result = await apiRequest('removeColumn', {
+                table: currentTable,
+                columnName: columnName
+            });
+
+            if (result.success) {
+                showAlert(`Column "${columnName}" removed successfully`, 'success');
+                closeModal('removeColumnModal');
+                await loadTableInfo();
+                await loadTableData();
+            } else {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth"
+                });
+                closeModal('removeColumnModal');
+            }
+        }
+
+        async function loadTables() {
+            const container = document.getElementById('tableList');
+            if (!container) return;
+            showLoading(container);
+            const result = await apiRequest('getTables');
+            hideLoading(container);
+            if (result.success && result.data) {
+                allTableNames = result.data;
+                if (result.data.length === 0) {
+                    container.innerHTML = '<div class="text-muted text-center py-3">No tables found</div>';
+                } else {
+                    container.innerHTML = result.data.map(table => `
+                <div class="table-list-item ${currentTable === table ? 'active' : ''}" 
+                     onclick="selectTable('${table}')">
+                    <span>📊 ${table}</span>
+                </div>
+            `).join('');
+                }
+            } else {
+                container.innerHTML = '<div class="text-danger text-center py-3">Failed to load tables</div>';
+            }
+        }
+
+        async function selectTable(table) {
+            currentTable = table;
+            currentPage = 0;
+            totalRecords = 0;
+            filteredData = [];
+            await loadTables();
+            await loadTableInfo();
+            await loadTableData();
+        }
+
+        async function loadTableInfo() {
+            if (!currentTable) return;
+            const result = await apiRequest('getTableInfo', {
+                table: currentTable
+            });
+            if (result.success && result.data) {
+                currentColumns = result.data.columns || [];
+                currentKeys = result.data.keys || {};
+                renderTableInfo();
+                await loadTableData();
+            }
+        }
+
+        function renderTableInfo() {
+            const container = document.getElementById('tableContent');
+            if (!container) return;
+            if (!currentColumns.length) {
+                container.innerHTML = '<div class="text-center text-muted py-5">No columns found</div>';
+                return;
+            }
+
+            let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+            <h5 style="font-size: 16px; font-weight: 600;">
+                <span class="icon">📋</span>Table: <strong>${currentTable}</strong>
+            </h5>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary btn-sm" onclick="showAddColumnModal()">
+                    <span class="icon">➕</span> Column
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="showRemoveColumnModal()">
+                    <span class="icon">🗑️</span> Remove
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="showRenameColumnModal()">
+                    <span class="icon">✏️</span> Rename
+                </button>
+                <button class="btn btn-outline-warning btn-sm" onclick="showModifyColumnModal()">
+                    <span class="icon">⚙️</span> Modify
+                </button>
+                <button class="btn btn-outline-info btn-sm" onclick="showKeyModal()">
+                    <span class="icon">🔑</span> Keys
+                </button>
+                <button class="btn btn-success btn-sm" onclick="showInsertRowModal()">
+                    <span class="icon">➕</span> Insert
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="truncateTable()">
+                    <span class="icon">🗑️</span> Truncate
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Null</th>
+                        <th>Key</th>
+                        <th>Default</th>
+                        <th>Extra</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+            currentColumns.forEach(col => {
+                let keyBadges = '';
+                if (col.Key === 'PRI') keyBadges = '<span class="badge-key bg-primary">PRI</span>';
+                else if (col.Key === 'UNI') keyBadges = '<span class="badge-key bg-info">UNI</span>';
+                else if (col.Key === 'MUL') keyBadges = '<span class="badge-key bg-secondary">MUL</span>';
+
+                html += `
+            <tr>
+                <td><strong>${col.Field}</strong></td>
+                <td>${col.Type}</td>
+                <td>${col.Null}</td>
+                <td>${keyBadges || '—'}</td>
+                <td>${col.Default !== null && col.Default !== undefined ? col.Default : 'NULL'}</td>
+                <td>${col.Extra || ''}</td>
+            </tr>
+        `;
+            });
+
+            html += `
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4" id="tableDataContainer">
+            <div class="text-center text-muted py-3">Loading data...</div>
+        </div>
+    `;
+
+            container.innerHTML = html;
+        }
+
+        async function loadTableData() {
+            if (!currentTable) return;
+            const container = document.getElementById('tableDataContainer');
+            if (!container) return;
+
+            showLoading(container);
+            const offset = currentPage * dataLimit;
+            const result = await apiRequest('getTableData', {
+                table: currentTable,
+                limit: dataLimit,
+                offset: offset
+            });
+            hideLoading(container);
+
+            if (result.success && result.data) {
+                tableData = result.data;
+                totalRecords = result.total || 0;
+                renderTableData();
+            } else {
+                container.innerHTML = '<div class="text-center text-danger py-3">Failed to load data</div>';
+            }
+        }
+
+        function goToPage(page) {
+            const totalPages = Math.ceil(totalRecords / dataLimit);
+            if (page < 0 || page >= totalPages) return;
+            currentPage = page;
+            loadTableData();
+        }
+
+        function renderTableData(filtered = false) {
+            const container = document.getElementById('tableDataContainer');
+            if (!container) return;
+            const dataToShow = filteredData.length ? filteredData : tableData;
+
+            if (!dataToShow.length) {
+                container.innerHTML =
+                    `<div class="text-center text-muted py-3">${filteredData.length ? 'No matching rows found' : 'No rows found'}</div>`;
+                return;
+            }
+
+            const columns = Object.keys(dataToShow[0]);
+            const primaryKey = currentColumns.find(c => c.Key === 'PRI')?.Field || columns[0];
+            let totalPages = Math.ceil(totalRecords / dataLimit);
+
+            if (filtered == false || filteredData.length != 0) {
+                if (filteredData.length) {
+                    totalPages = Math.ceil(filteredData.length / dataLimit);
+                } else {
+                    totalPages = Math.ceil(totalRecords / dataLimit);
+                }
+            }
+
+            const columnOptions = ['all', ...columns].map(col =>
+                `<option value="${col}">${col === 'all' ? 'All Columns' : col}</option>`
+            ).join('');
+
+            let html = `
+        <h6 style="margin-bottom: 10px;"><span class="icon">📊</span>Data (${dataToShow.length} of ${totalRecords} rows)</h6>
+        
+        <div class="filter-bar">
+            <span class="filter-label">🔍 Search:</span>
+            <select id="filterColumnSelect" class="form-control" style="width:auto;display:inline-block;">
+                ${columnOptions}
+            </select>
+            <input type="text" id="filterInputValue" class="form-control" placeholder="Enter value..." style="width:auto;display:inline-block;">
+            <button class="btn btn-primary btn-sm" onclick="applyFilter()">Submit</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">Clear</button>
+        </div>
+
+        <div class="table-responsive" style="max-height: 400px;">
+            <table>
+                <thead>
+                    <tr>
+                        ${columns.map(col => `<th>${col}</th>`).join('')}
+                        <th style="min-width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+            if (filtered == false || filteredData.length != 0) {
+                dataToShow.forEach(row => {
+                    html += '<tr>';
+                    columns.forEach(col => {
+                        html += `<td>${row[col] !== null ? row[col] : '<span class="text-muted">NULL</span>'}</td>`;
+                    });
+                    const pkValue = row[primaryKey];
+                    html += `
+            <td>
+                <button class="btn btn-outline-primary btn-sm" onclick="showEditRowModal('${pkValue}')" style="margin: 2px;">
+                    ✏️
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteRow('${pkValue}')" style="margin: 2px;">
+                    🗑️
+                </button>
+            </td>
+        </tr>
+        `;
+                });
+            }
+
+            html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+            if (totalPages > 1 || currentPage > 0) {
+                html += `
+            <div class="pagination-bar">
+                <span class="info">Page ${currentPage + 1} of ${totalPages}</span>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="goToPage(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>
+                        ← Previous
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>
+                        Next →
+                    </button>
+                </div>
+            </div>
+        `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function applyFilter() {
+            const column = document.getElementById('filterColumnSelect').value;
+            const value = document.getElementById('filterInputValue').value.trim();
+
+            if (!value) {
+                filteredData = [];
+                renderTableData();
+                return;
+            }
+
+            if (column === 'all') {
+                filteredData = tableData.filter(row => {
+                    for (let key in row) {
+                        if (row[key] !== null && String(row[key]).toLowerCase().includes(value.toLowerCase())) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+            } else {
+                filteredData = tableData.filter(row => {
+                    if (row[column] === null) return false;
+                    return String(row[column]).toLowerCase().includes(value.toLowerCase());
+                });
+            }
+            renderTableData(true);
+
+            setTimeout(() => {
+                document.getElementById('filterColumnSelect').value = column;
+                document.getElementById('filterInputValue').value = value;
+            }, 1000);
+        }
+
+        function clearFilter() {
+            document.getElementById('filterInputValue').value = '';
+            filteredData = [];
+            renderTableData();
+        }
+
+        async function createTable() {
+            const tableName = document.getElementById('newTableName').value.trim();
+            const columns = document.getElementById('newTableColumns').value.trim();
+
+            if (!tableName || !columns) {
+                showAlert('Table name and columns are required', 'warning');
+                return;
+            }
+
+            const result = await apiRequest('createTable', {
+                tableName,
+                columns
+            });
+            if (result.success) {
+                showAlert(`Table "${tableName}" created successfully`, 'success');
+                document.getElementById('newTableName').value = '';
+                document.getElementById('newTableColumns').value = '';
+                closeModal('createTableModal');
+                await loadTables();
+                currentTable = tableName;
+                await selectTable(tableName);
+            }
+        }
+
+        async function dropTable() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            if (!confirm(`Are you sure you want to drop table "${currentTable}"? This cannot be undone!`)) return;
+
+            const result = await apiRequest('dropTable', {
+                table: currentTable
+            });
+            if (result.success) {
+                showAlert(`Table "${currentTable}" dropped`, 'warning');
+                currentTable = null;
+                document.getElementById('tableContent').innerHTML = `
+            <div class="text-center text-muted py-5">
+                <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+                <p>Select a table from the left to manage it</p>
+            </div>
+        `;
+                await loadTables();
+            }
+        }
+
+        function showRenameTableModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            document.getElementById('renameTableName').value = currentTable;
+            openModal('renameTableModal');
+        }
+
+        async function renameTable() {
+            const newName = document.getElementById('renameTableName').value.trim();
+            if (!newName) {
+                showAlert('New table name is required', 'warning');
+                return;
+            }
+            if (newName === currentTable) {
+                closeModal('renameTableModal');
+                return;
+            }
+
+            const result = await apiRequest('renameTable', {
+                oldName: currentTable,
+                newName
+            });
+            if (result.success) {
+                showAlert(`Table renamed to "${newName}"`, 'success');
+                closeModal('renameTableModal');
+                currentTable = newName;
+                await loadTables();
+                await selectTable(newName);
+            }
+        }
+
+        async function truncateTable() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            if (!confirm(`Truncate all data from "${currentTable}"?`)) return;
+
+            const result = await apiRequest('truncateTable', {
+                table: currentTable
+            });
+            if (result.success) {
+                showAlert(`Table "${currentTable}" truncated`, 'warning');
+                currentPage = 0;
+                await loadTableData();
+            }
+        }
+
+        function showAddColumnModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            document.getElementById('addColumnDef').value = '';
+            openModal('addColumnModal');
+        }
+
+        async function addColumn() {
+            const columnDef = document.getElementById('addColumnDef').value.trim();
+            if (!columnDef) {
+                showAlert('Column definition is required', 'warning');
+                return;
+            }
+
+            const result = await apiRequest('addColumn', {
+                table: currentTable,
+                columnDef
+            });
+            if (result.success) {
+                showAlert('Column added successfully', 'success');
+                closeModal('addColumnModal');
+                await loadTableInfo();
+                await loadTableData();
+            }
+        }
+
+        function showRenameColumnModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            document.getElementById('renameOldCol').value = '';
+            document.getElementById('renameNewCol').value = '';
+            openModal('renameColumnModal');
+        }
+
+        async function renameColumn() {
+            const oldName = document.getElementById('renameOldCol').value.trim();
+            const newName = document.getElementById('renameNewCol').value.trim();
+            if (!oldName || !newName) {
+                showAlert('Both column names are required', 'warning');
+                return;
+            }
+
+            const result = await apiRequest('renameColumn', {
+                table: currentTable,
+                oldName,
+                newName
+            });
+            if (result.success) {
+                showAlert(`Column renamed from "${oldName}" to "${newName}"`, 'success');
+                closeModal('renameColumnModal');
+                await loadTableInfo();
+                await loadTableData();
+            }
+        }
+
+        function showModifyColumnModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            document.getElementById('modifyColName').value = '';
+            document.getElementById('modifyColDef').value = '';
+            openModal('modifyColumnModal');
+        }
+
+        async function modifyColumn() {
+            const columnName = document.getElementById('modifyColName').value.trim();
+            const newDef = document.getElementById('modifyColDef').value.trim();
+            if (!columnName || !newDef) {
+                showAlert('Column name and new definition are required', 'warning');
+                return;
+            }
+
+            const result = await apiRequest('modifyColumn', {
+                table: currentTable,
+                columnName,
+                newDef
+            });
+            if (result.success) {
+                showAlert(`Column "${columnName}" modified`, 'success');
+                closeModal('modifyColumnModal');
+                await loadTableInfo();
+                await loadTableData();
+            }
+        }
+
+        function showKeyModal() {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            document.getElementById('pkColumn').value = '';
+            document.getElementById('uniqueColumn').value = '';
+            document.getElementById('dropKeyName').value = '';
+            openModal('keyModal');
+        }
+
+        async function setPrimaryKey() {
+            const column = document.getElementById('pkColumn').value.trim();
+            if (!column) {
+                showAlert('Column name is required', 'warning');
+                return;
+            }
+            const result = await apiRequest('setPrimaryKey', {
+                table: currentTable,
+                column
+            });
+            if (result.success) {
+                showAlert(`PRIMARY KEY set on "${column}"`, 'success');
+                document.getElementById('pkColumn').value = '';
+                await loadTableInfo();
+            }
+        }
+
+        async function setUniqueKey() {
+            const column = document.getElementById('uniqueColumn').value.trim();
+            if (!column) {
+                showAlert('Column name is required', 'warning');
+                return;
+            }
+            const result = await apiRequest('setUniqueKey', {
+                table: currentTable,
+                column
+            });
+            if (result.success) {
+                showAlert(`UNIQUE KEY set on "${column}"`, 'success');
+                document.getElementById('uniqueColumn').value = '';
+                await loadTableInfo();
+            }
+        }
+
+        async function dropKey() {
+            const keyName = document.getElementById('dropKeyName').value.trim();
+            if (!keyName) {
+                showAlert('Key name is required', 'warning');
+                return;
+            }
+            const result = await apiRequest('dropKey', {
+                table: currentTable,
+                keyName
+            });
+            if (result.success) {
+                showAlert(`Key "${keyName}" dropped`, 'info');
+                document.getElementById('dropKeyName').value = '';
+                await loadTableInfo();
+            }
+        }
+
+        function showInsertRowModal() {
+            if (!currentTable || !currentColumns.length) {
+                showAlert('Please select a valid table', 'warning');
+                return;
+            }
+
+            const container = document.getElementById('insertRowFields');
+            let html = `<input type="hidden" name="table" value="${currentTable}">`;
+            html += `<input type="hidden" id="insertSkipColumns" name="skip_columns" value="">`;
+
+            currentColumns.forEach(col => {
+                if (col.Extra && col.Extra.includes('auto_increment')) {
+                    html += `<div class="field-row text-muted" style="padding: 6px 0;">
+                        <span style="min-width: 120px;">${col.Field}</span>
+                        <span style="flex:1; font-size:13px;">(auto-increment, will be generated)</span>
+                    </div>`;
+                } else {
+                    html += `
+                <label class="form-label">${col.Field} <small class="text-muted">(${col.Type})</small></label>
+                <div class="field-row">
+                    
+                    <input class="form-control" name="col_${col.Field}" placeholder="Enter value for ${col.Field}" id="input_${col.Field}" disabled>
+                    <div class="skip-checkbox" id="skip_${col.Field}">
+                        <input type="checkbox" id="skip_check_${col.Field}" onchange="toggleSkip('${col.Field}')" checked>
+                        <label for="skip_check_${col.Field}">Skip</label>
+                    </div>
+                </div>
+            `;
+                }
+            });
+            container.innerHTML = html;
+            openModal('insertRowModal');
+            updateSkipColumnsList();
+        }
+
+        function toggleSkip(columnName) {
+            const checkbox = document.getElementById(`skip_check_${columnName}`);
+            const row = checkbox.closest('.field-row');
+            const skipDiv = row.querySelector('.skip-checkbox');
+            const input = document.getElementById(`input_${columnName}`);
+
+            if (checkbox.checked) {
+                skipDiv.classList.add('checked');
+                input.disabled = true;
+                input.style.opacity = '0.5';
+                input.style.background = '#f0f0f0';
+                input.value = '';
+            } else {
+                skipDiv.classList.remove('checked');
+                input.disabled = false;
+                input.style.opacity = '1';
+                input.style.background = '';
+            }
+
+            updateSkipColumnsList();
+        }
+
+        function updateSkipColumnsList() {
+            const skipInput = document.getElementById('insertSkipColumns');
+            const checkboxes = document.querySelectorAll('#insertRowFields .skip-checkbox input[type="checkbox"]');
+            const skipped = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const colName = cb.id.replace('skip_check_', '');
+                    skipped.push(colName);
+                }
+            });
+            skipInput.value = JSON.stringify(skipped);
+        }
+
+        async function insertRow() {
+            const form = document.getElementById('insertRowFields');
+            const inputs = form.querySelectorAll('input');
+            const data = {
+                table: currentTable
+            };
+
+            inputs.forEach(input => {
+                if (input.name.startsWith('col_')) {
+                    const colName = input.name.substring(4);
+                    data[`col_${colName}`] = input.value;
+                } else if (input.name === 'skip_columns') {
+                    data.skip_columns = input.value;
+                }
+            });
+
+            const result = await apiRequest('insertRow', data);
+            if (result.success) {
+                showAlert('Row inserted successfully', 'success');
+                closeModal('insertRowModal');
+                currentPage = 0;
+                await loadTableData();
+            } else {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth"
+                });
+                closeModal('insertRowModal');
+            }
+        }
+
+        function showEditRowModal(primaryKeyValue) {
+            if (!currentTable || !currentColumns.length) {
+                showAlert('Please select a valid table', 'warning');
+                return;
+            }
+
+            const primaryKey = currentColumns.find(c => c.Key === 'PRI')?.Field || 'id';
+            const row = tableData.find(r => String(r[primaryKey]) === String(primaryKeyValue));
+            if (!row) {
+                showAlert('Row not found', 'danger');
+                return;
+            }
+
+            const container = document.getElementById('editRowFields');
+            let html = `
+        <input type="hidden" name="table" value="${currentTable}">
+        <input type="hidden" name="whereCol" value="${primaryKey}">
+        <input type="hidden" name="whereVal" value="${primaryKeyValue}">
+        <input type="hidden" id="editSkipColumns" name="skip_columns" value="">
+    `;
+
+            currentColumns.forEach(col => {
+                const value = row[col.Field] !== null ? row[col.Field] : '';
+                if (col.Extra && col.Extra.includes('auto_increment')) {
+                    html += `<div class="field-row text-muted" style="padding: 6px 0;">
+                        <span style="min-width: 120px;">${col.Field}</span>
+                        <span style="flex:1; font-size:13px;">(auto-increment, will be generated)</span>
+                        <span style="flex-shrink:0; font-size:13px;">value: ${value}</span>
+                    </div>`;
+                } else {
+                    let checkBoxDynamic = `<input type="checkbox" id="edit_skip_check_${col.Field}" onchange="toggleEditSkip('${col.Field}')">`;
+                    let inputDynamic = `<input class="form-control" name="col_${col.Field}" value="${value}" id="edit_input_${col.Field}">`;
+                    if (!value || value == "" || value == null) {
+                        checkBoxDynamic = `<input type="checkbox" id="edit_skip_check_${col.Field}" checked onchange="toggleEditSkip('${col.Field}')">`;
+                        inputDynamic = `<input class="form-control" name="col_${col.Field}" value="${value}" id="edit_input_${col.Field}" style="opacity: 0.5; background: rgb(240, 240, 240);" disabled>`;
+                    }
+                    html += `
+                <label class="form-label">${col.Field} <small class="text-muted">(${col.Type})</small></label>
+                <div class="field-row">
+                    ${inputDynamic}
+                    <div class="skip-checkbox" id="edit_skip_${col.Field}">
+                        ${checkBoxDynamic}
+                        <label for="edit_skip_check_${col.Field}">Skip</label>
+                    </div>
+                </div>
+            `;
+                }
+            });
+            container.innerHTML = html;
+            openModal('editRowModal');
+            updateEditSkipColumnsList();
+        }
+
+        function toggleEditSkip(columnName) {
+            const checkbox = document.getElementById(`edit_skip_check_${columnName}`);
+            const row = checkbox.closest('.field-row');
+            const skipDiv = row.querySelector('.skip-checkbox');
+            const input = document.getElementById(`edit_input_${columnName}`);
+
+            if (checkbox.checked) {
+                skipDiv.classList.add('checked');
+                input.disabled = true;
+                input.style.opacity = '0.5';
+                input.style.background = '#f0f0f0';
+            } else {
+                skipDiv.classList.remove('checked');
+                input.disabled = false;
+                input.style.opacity = '1';
+                input.style.background = '';
+            }
+
+            updateEditSkipColumnsList();
+        }
+
+        function updateEditSkipColumnsList() {
+            const skipInput = document.getElementById('editSkipColumns');
+            const checkboxes = document.querySelectorAll('#editRowFields .skip-checkbox input[type="checkbox"]');
+            const skipped = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const colName = cb.id.replace('edit_skip_check_', '');
+                    skipped.push(colName);
+                }
+            });
+            skipInput.value = JSON.stringify(skipped);
+        }
+
+        async function updateRow() {
+            const form = document.getElementById('editRowFields');
+            const inputs = form.querySelectorAll('input');
+            const data = {
+                table: currentTable
+            };
+
+            inputs.forEach(input => {
+                if (input.name.startsWith('col_')) {
+                    const colName = input.name.substring(4);
+                    data[`col_${colName}`] = input.value;
+                } else if (input.name === 'whereCol') {
+                    data.whereCol = input.value;
+                } else if (input.name === 'whereVal') {
+                    data.whereVal = input.value;
+                } else if (input.name === 'skip_columns') {
+                    data.skip_columns = input.value;
+                }
+            });
+
+            const result = await apiRequest('updateRow', data);
+            if (result.success) {
+                showAlert('Row updated successfully', 'success');
+                closeModal('editRowModal');
+                currentPage = 0;
+                await loadTableData();
+            } else {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth"
+                });
+                closeModal('editRowModal');
+            }
+        }
+
+        async function deleteRow(primaryKeyValue) {
+            if (!currentTable) {
+                showAlert('Please select a table first', 'warning');
+                return;
+            }
+            if (!confirm('Delete this row?')) return;
+
+            const primaryKey = currentColumns.find(c => c.Key === 'PRI')?.Field || 'id';
+            const result = await apiRequest('deleteRow', {
+                table: currentTable,
+                whereCol: primaryKey,
+                whereVal: primaryKeyValue
+            });
+            if (result.success) {
+                showAlert('Row deleted', 'danger');
+                currentPage = 0;
+                await loadTableData();
+            }
+        }
+
+        async function refreshAll() {
+            await loadTables();
+            if (currentTable) {
+                currentPage = 0;
+                await loadTableInfo();
+                await loadTableData();
+            }
+            showAlert('Refreshed', 'info');
+        }
+
+        function showCreateTableModal() {
+            document.getElementById('newTableName').value = '';
+            document.getElementById('newTableColumns').value = 'id INT PRIMARY KEY AUTO_INCREMENT,\nname VARCHAR(100) NOT NULL';
+            openModal('createTableModal');
+        }
+
+        function copyCredential(elementId) {
+            const element = document.getElementById(elementId);
+            let text;
+            if (elementId === 'cred_password') {
+                text = element.getAttribute('data-actual');
+            } else {
+                text = element.textContent;
+            }
+
+            if (!text || text === '(empty)') {
+                showAlert('No value to copy', 'warning');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.parentElement.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            }).catch(() => {
+                const range = document.createRange();
+                range.selectNode(element);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showAlert('Copied!', 'success');
+            });
+        }
+
+        function copyAllCredentials() {
+            const credentialItems = document.querySelectorAll('.credential-item .value');
+            let allText = '';
+            credentialItems.forEach(item => {
+                const label = item.parentElement.querySelector('.label').textContent;
+                let value;
+                if (item.id === 'cred_password') {
+                    value = item.getAttribute('data-actual') || '';
+                } else {
+                    value = item.textContent;
+                }
+                allText += `${label}: ${value}\n`;
+            });
+
+            navigator.clipboard.writeText(allText).then(() => {
+                showAlert('All credentials copied!', 'success');
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = allText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showAlert('All credentials copied!', 'success');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const result = await apiRequest('getTables');
+                if (result.success) {
+                    await loadTables();
+                    if (result.data && result.data.length > 0) {
+                        currentTable = result.data[0];
+                        await selectTable(currentTable);
+                    }
+                }
+            } catch (error) {
+                showAlert('Failed to connect to database: ' + error.message, 'danger');
+            }
+        });
+    </script>
+</body>
+
+</html>

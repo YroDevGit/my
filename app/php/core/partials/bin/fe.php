@@ -1,0 +1,920 @@
+<?php
+
+if (env("rootpath") == "" || env("rootpath") == null) {
+    $rootpath = get_basixs_root_path();
+    putenv("rootpath=$rootpath");
+    $_ENV['rootpath'] = $rootpath;
+}
+define('rootpath', env('rootpath'));
+define('pages', 'views/pages');
+define('_backend', '_backend');
+define('assets', '/views/assets');
+define('codepath', '/views/code');
+
+define('SUCCESS', env('success_code'));
+
+define("success_code", env("success_code"));
+define("error_code", env("error_code"));
+define("db_error_code", env("db_error_code"));
+define("notfound_code", env("notfound_code"));
+define("forbidden_code", env("forbidden_code"));
+define("unauthorized_code", env("unauthorized_code"));
+define("badrequest_code", env("badrequest_code"));
+define("warning_code", env("warning_code"));
+define("no_internet_code", env("no_internet_code"));
+define("backend_error_code", env("backend_error_code"));
+define("failed_code", env("failed_code"));
+define('app_name', env('app_name'));
+define('ctrql_auth_failed', env('ctrql_auth_failed'));
+define("now", date("Y-m-d H:i:s"));
+
+if (env("time_zone")) {
+    date_default_timezone_set(env("time_zone"));
+}
+
+if (! function_exists("now")) {
+    function now(string|null $dateformat = "Y-m-d H:i:s", $timezone = null)
+    {
+        $dateformat ??= "Y-m-d H:i:s";
+        if ($timezone) {
+            $from = date_default_timezone_get();
+            if ($from == $timezone) {
+                return date($dateformat);
+            }
+            $dt = new DateTime("now", new DateTimeZone($from));
+            $dt->setTimezone(new DateTimeZone($timezone));
+            return $dt->format($dateformat);
+        }
+        return date($dateformat);
+    }
+}
+
+if (! function_exists("env")) {
+    function env(string $key)
+    {
+        return env($key);
+    }
+}
+
+if (! function_exists("env_in_prod")) {
+    function env_in_prod(): bool
+    {
+        if (env('environment') == "prod" || env("environment") == "production") {
+            return true;
+        }
+        return false;
+    }
+}
+
+if (! function_exists("errorStrId")) {
+    function errorStrId(string|null $based = null, string $errorStr = "err_")
+    {
+        $r = $errorStr;
+        if (! $based) return $r;
+        return $r . $based;
+    }
+}
+
+if (!function_exists('dd')) {
+    function dd(...$vars)
+    {
+        foreach ($vars as $v) {
+            echo '<pre>';
+            var_dump($v);
+            echo '</pre>';
+        }
+        exit(1);
+    }
+}
+
+if (! function_exists("val")) {
+    function val(&$val, $datatype = "string")
+    {
+        $datatype = strtolower($datatype);
+        if (! isset($val) || ! $val || $val == null || $val == "") {
+            switch ($datatype) {
+                case "string":
+                case "text":
+                    return "";
+                    break;
+                case "number":
+                case "int":
+                case "integer":
+                case "float":
+                case "double":
+                case "num":
+                    return "0";
+                    break;
+                case "array":
+                case "object":
+                    return [];
+                    break;
+                case "boolean":
+                case "bool":
+                    return false;
+                    break;
+                default:
+                    return "";
+                    break;
+            }
+        }
+    }
+}
+
+if (! function_exists("decrypt_csrf_codetazer")) {
+    function encrypted_csrf_codetazer($characters = 18, $strict = true)
+    {
+        $arr = range("A", "Z");
+        for ($x = 1; $x <= 9; $x++) {
+            $arr[] = (string) $x;
+        }
+        shuffle($arr);
+        $str = "";
+        if ($strict) {
+            $s = date("ymdhis");
+            for ($i = 0; $i <= $characters - 12; $i++) {
+                $str .= (string)$arr[$i];
+            }
+            $str .= $s;
+        } else {
+            for ($i = 0; $i <= $characters; $i++) {
+                $str .= (string)$arr[$i];
+            }
+        }
+        return $str;
+    }
+}
+
+if (! function_exists("csrf")) {
+    function csrf()
+    {
+        $tkn = $_SESSION[ctr_secure_key] ?? null;
+        return "<input type='hidden' name='csrf_ctr_field' value='$tkn'>";
+    }
+}
+
+if (! function_exists("csrf_token")) {
+    function csrf_token()
+    {
+        return $_SESSION[ctr_secure_key] ?? null;
+    }
+}
+
+if (! function_exists("change_date")) {
+    function change_date(string $date, string|null $interval)
+    {
+        $given = $date;
+        $date = new DateTime($given);
+        $date->modify($interval);
+        ///or: $new   = date('Y-m-d H:i:s', strtotime($given . ' +20 minutes'));
+        return $date->format('Y-m-d H:i:s');
+    }
+}
+
+if (! function_exists("get_date")) {
+    function get_date(string $date, string $format = "Y-m-d H:i:s")
+    {
+        $given = $date;
+        $date  = new DateTime($given);
+        return $date->format($format);
+    }
+}
+
+if (! function_exists('page')) {
+    function page(string|null $path = "/", array $param = [])
+    {
+        if ($path !== "/") {
+            if (! str_starts_with($path, "/")) {
+                $path = "/" . $path;
+            }
+        }
+        if ($param) {
+            $arr = [];
+            foreach ($param as $k => $v) {
+                $arr[] = $k . "=" . $v;
+            }
+            $parameter = implode("&", $arr);
+            return $path . "?" . $parameter;
+        }
+        return $path;
+    }
+}
+
+if (! function_exists('function_page')) {
+    function function_page(string $path = "?", mixed $param = [])
+    {
+        if ($path === "?") {
+            return rootpath . "/?funcpage=";
+        }
+        $bb = explode("?", $path);
+        $path = $bb[0];
+        $params = isset($bb[1]) ? "?" . $bb[1] : "";
+        if ($param) {
+            if (is_array($param)) {
+                $getter = "";
+                foreach ($param as $k => $v) {
+                    $getter .= $k . "=" . $v . "&";
+                }
+                $params = "?" . rtrim($getter, "&");
+            } else {
+                $params = "?param=" . $param;
+            }
+        }
+        if ($path == "" || $path == null) {
+            return rootpath . $params;
+        } else {
+            $path = substr($path, -4) == ".php" ? $path : $path . ".php";
+            return rootpath . "/?funcpage=" . $path . $params;
+        }
+    }
+}
+
+if (! function_exists('back_end')) {
+    function back_end(string $path = "=")
+    {
+        if ($path === "=") {
+            return rootpath . "/?be=";
+        }
+        if ($path === "?") {
+            return rootpath . "/?be";
+        }
+        $bb = explode("?", $path);
+        $path = $bb[0];
+        $param = isset($bb[1]) ? "?" . $bb[1] : "";
+        if ($path == "" || $path == null) {
+            return rootpath . $param;
+        } else {
+            $path = substr($path, -4) == ".php" ? $path : $path . ".php";
+            return rootpath . "/?be=" . $path . $param;
+        }
+    }
+}
+
+if (! function_exists("current_page")) {
+    function current_page(bool $withParam = false, $startsWithSlash = false, bool $php_exention = false): string
+    {
+        $filename =  $_SESSION['basixs_current_fe_ctrx'] ?? null;
+        if (! $filename) return "/";
+        if (! str_starts_with($filename, "/") && $startsWithSlash) {
+            $filename = "/" . $filename;
+        }
+        if (! $startsWithSlash && str_starts_with($filename, "/")) {
+            $filename = substr($filename, 1);
+        }
+        if (! $withParam) {
+            $expl = explode("?", $filename);
+            $filename = $expl[0] ?? "";
+        }
+        if (! $php_exention) {
+            $filename = substr($filename, -4) === '.php' ? substr($filename, 0, -4) : $filename;
+            return $filename;
+        }
+
+        return $filename;
+    }
+}
+
+if (! function_exists("page_title")) {
+    function page_title()
+    {
+        return $_SESSION['basixs_current_page_title'];
+    }
+}
+
+if (! function_exists("set_page_title")) {
+    function set_page_title(string $pagetitle)
+    {
+        $_SESSION['basixs_current_page_title'] = $pagetitle;
+    }
+}
+
+if (! function_exists('_backend')) {
+    function _backend(string $path = "")
+    {
+        if ($path == "" || $path == null) {
+            return _backend;
+        } else {
+            return _backend . "/" . $path;
+        }
+    }
+}
+if (! function_exists('assets')) {
+    function assets(string $path = "")
+    {
+        if ($path == "" || $path == null) {
+            return assets;
+        } else {
+            $path = trim($path, "/");
+            $path = trim($path, "\\");
+
+            if (str_ends_with($path, ".css") || str_ends_with($path, ".js") || str_ends_with($path, ".scss")) {
+                $version = fe_config("assets_version") ? strval(fe_config("assets_version")) : "1.0";
+                $path = $path . "?v=" . $version;
+            }
+            return assets . "/" . $path;
+        }
+    }
+}
+
+if (! function_exists('codepath')) {
+    function codepath(string $path = "")
+    {
+        if ($path == "" || $path == null) {
+            return codepath;
+        } else {
+            return codepath . "/" . $path;
+        }
+    }
+}
+
+/**
+ * This is use for conditions
+ * this not return parameters as default (you can set true 1st param)
+ * this not starts with / as default (you can set true 2nd param)
+ */
+if (! function_exists("previous_page")) {
+    function previous_page(bool $withParam = false, $startsWithSlash = false)
+    {
+        $url = \Classes\Ctrx::ctrx_getPreviousPage();
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! str_starts_with($path, "/") && $startsWithSlash) {
+            $path = "/" . $path;
+        }
+        if (! $startsWithSlash && str_starts_with($path, "/")) {
+            $path = substr($path, 1);
+        }
+        $query = parse_url($url, PHP_URL_QUERY);
+        if ($query) {
+            if ($withParam) {
+                return $path . "?" . $query;
+            } else {
+                return $path;
+            }
+        } else {
+            return $path;
+        }
+    }
+}
+
+/**
+ * This is the standard use for <a href="?"
+ * or to any redirects
+ * it has return with parameters (as default)
+ * it has return with / at the first character
+ */
+if (! function_exists("prev_page")) {
+    function prev_page($withParam = true)
+    {
+        return previous_page($withParam, true);
+    }
+}
+
+if (! function_exists("ctrx_force_save_pages")) {
+    function ctrx_force_save_previous_pages(string $previous_page)
+    {
+        $_SESSION['cTrx_pReviOus_paGee_basixs112100514'] = $previous_page;
+    }
+}
+
+if (! function_exists("ctr_generate_request_id")) {
+    function ctr_generate_request_id()
+    {
+        $date = date("ymdhis");
+        $arr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        shuffle($arr);
+        $date = date("ymdHis");
+        $req = $arr[0] . $arr[1] . $arr[8] . $date . $arr[3] . $arr[8] . $arr[9];
+        return $req;
+    }
+}
+
+if (! function_exists("ctr_get_current_request_id")) {
+    function ctr_get_current_request_id()
+    {
+        return $_SESSION["ctr_unique_request_id_x0015"] ?? null;
+    }
+}
+
+if (! function_exists("has_internet_connection")) {
+    function has_internet_connection($url = "http://www.google.com")
+    {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $data = curl_exec($ch);
+        if ($data) {
+            curl_close($ch);
+            return true;
+        } else {
+            curl_close($ch);
+            return false;
+        }
+    }
+}
+
+if (! function_exists("get")) {
+    function get(string $key)
+    {
+        return isset($_GET[$key]) ? $_GET[$key] : null;
+    }
+}
+
+
+if (! function_exists('href')) {
+    function href(string $path = "")
+    {
+        if ($path !== "/") {
+            if (! str_starts_with($path, "/")) {
+                $path = "/" . $path;
+            }
+        }
+        if ($path == "" || $path == null) {
+            header('location:/');
+        } else {
+            header('location: ' . $path);
+        }
+    }
+}
+
+if (! function_exists('redirect')) {
+    function redirect(string $path = "", string $type = "page", int $time = 0, $exit = true)
+    {
+        if ($path !== "/") {
+            if (! str_starts_with($path, "/")) {
+                $path = "/" . $path;
+            }
+        }
+        if ($type == "page") {
+            header("refresh: $time; url=" . $path);
+        }
+        if ($exit) {
+            exit;
+        }
+    }
+}
+
+if (! function_exists("reload_page")) {
+    function reload_page($withParam = true)
+    {
+        $page = current_page($withParam, true);
+        redirect($page);
+    }
+}
+
+if (! function_exists('redirect_logout')) {
+    function redirect_logout(string|null $logoutPage = null, string $type = "page", int $time = 0, $exit = true)
+    {
+        $path = "/ctrx/logout";
+        if ($path !== "/") {
+            if (! str_starts_with($path, "/")) {
+                $path = "/" . $path;
+            }
+        }
+        if ($type == "page") {
+            if ($logoutPage) {
+                header("refresh: $time; url=" . $path . "?page=" . $logoutPage);
+            } else {
+                header("refresh: $time; url=" . $path);
+            }
+        }
+        if ($exit) {
+            exit;
+        }
+    }
+}
+
+if (! function_exists("ctrx_logout")) {
+    function ctrx_logout($page = null)
+    {
+        return "/ctrx/logout?page=$page";
+    }
+}
+
+if (! function_exists("ctrx_error_message")) {
+    function ctrx_error_message(string $message, $path = "/", int $seconds = 2)
+    {
+        echo "<b style='color:red;'>$message</b>";
+        header("refresh: $seconds; url=" . $path);
+        exit;
+    }
+}
+
+if (! function_exists("write_sql_log")) {
+    function write_sql_log($message)
+    {
+        $setting = env('sql_logs');
+        if ($setting) {
+            $filename = "sql_" . date("Y-M-d") . "_yros.log";
+            $logfile =  "_backend/app/dblogs/" . $filename;
+            $formatted_message = "[" . date('Y-m-d H:i:s') . "] " . $message . PHP_EOL;
+            file_put_contents($logfile, $formatted_message, FILE_APPEND);
+        }
+    }
+}
+
+if (! function_exists("write_sql_error")) {
+    function write_sql_error($message, string $query = "")
+    {
+        $setting = env('sql_errors');
+        if ($setting == true) {
+            $logfile = "app/db_errors/sqlerrors.txt";
+
+            $message = preg_replace('/\s+/', ' ', trim($message));
+            $query = preg_replace('/\s+/', ' ', trim($query));
+
+            $formatted_message = "[" . date('Y-m-d H:i:s') . "] " . $message . " ==>> QUERY: " . $query . PHP_EOL . PHP_EOL;
+            file_put_contents($logfile, $formatted_message, FILE_APPEND);
+        }
+    }
+}
+
+if (! function_exists("view_page")) {
+    function view_page(string $page, array $variables = [])
+    {
+        $page = substr($page, -4) == ".php" ? $page : $page . ".php";
+        if (\Classes\Ctrx::file_exists_strict("_frontend/pages/$page")) {
+            if (!empty($variables)) {
+                extract($variables);
+            }
+            include "_frontend/pages/$page";
+        } else {
+            echo "<b style='color:red;background:black;padding:5px;font-weight:bold;'>Page $page doesn't exist.! Please check _frontend/pages/$page</b>";
+        }
+    }
+}
+
+if (! function_exists("include_page")) {
+    function include_page(string $page, array $variables = [])
+    {
+        $page = substr($page, -4) == ".php" ? $page : $page . ".php";
+        if (\Classes\Ctrx::file_exists_strict("views/includes/$page")) {
+            if (!empty($variables)) {
+                extract($variables);
+            }
+            include "views/includes/$page";
+        } else {
+            throw new Exception("Include page $page doesn't exist.! Please check views/pages/$page");
+        }
+    }
+}
+
+if (! function_exists("gval")) {
+    function gval($key, $val = null)
+    {
+        $ext = "ctrx_gval_forGlobalValue_yro";
+        if (! $val) {
+            if (isset($GLOBALS[$ext . "_" . $key])) {
+                $diy = $GLOBALS[$ext . "_" . $key];
+                $dec = json_decode($diy);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $dec ?? null;
+                } else {
+                    return $diy ?? null;
+                }
+            }
+            return null;
+        }
+        if (is_array($val)) {
+            $GLOBALS[$ext . "_" . $key] = json_encode($val);
+        } else {
+            $GLOBALS[$ext . "_" . $key] = $val;
+        }
+        return $val;
+    }
+}
+
+if (! function_exists("display")) {
+    function display($text)
+    {
+        if (is_array($text)) {
+            print_r($text);
+        } else {
+            echo $text;
+        }
+    }
+}
+
+if (! function_exists("display_error111")) {
+    function display_error111(string $message)
+    {
+        $str = new Exception($message);
+        $arr = explode("#", $str);
+        $err = [];
+        foreach ($arr as $r) {
+            if (strpos($r, '\app\system\helpers') !== false) {
+            } elseif (strpos($r, '\app\system') !== false) {
+            } elseif (strpos($r, '\index.php(11): require_once(') !== false) {
+            } else {
+                $err[] = $r;
+            }
+        }
+        $ff = implode("\n", $err);
+        $final = $message . " " . $ff;
+        return $final;
+    }
+}
+
+if (! function_exists("array_is_multidimensional")) {
+    function array_is_multidimensional(array $arr)
+    {
+        foreach ($arr as $element) {
+            if (is_array($element)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+if (! function_exists("php_file")) {
+    function php_file($pagename)
+    {
+        $mainpage = substr($pagename, -4) == ".php" ? $pagename : $pagename . ".php";
+        return $mainpage;
+    }
+}
+
+if (! function_exists("ctrx_all_routes")) {
+    function ctrx_all_routes($phpfile = false)
+    {
+        $baseDir = "";
+        $ep = ctr_endpoint();
+        if ($ep == "FE") {
+            $baseDir = 'views/pages';
+        } else {
+            $baseDir = '_controller';
+        }
+
+        $arrs = [];
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($baseDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $relativePath = str_replace($baseDir . DIRECTORY_SEPARATOR, '', $item->getPathname());
+
+            $relativePath = str_replace(DIRECTORY_SEPARATOR, "/", $relativePath);
+            if ($item->isDir()) {
+                continue;
+            } else {
+                if (str_starts_with($relativePath, "api/")) continue;
+                if ($phpfile) {
+                    $arrs[] = $relativePath;
+                } else {
+                    $arrs[] = rem_php($relativePath);
+                }
+            }
+        }
+        return $arrs;
+    }
+}
+
+if (! function_exists("ctrx_endpoint")) {
+    function ctrx_endpoint()
+    {
+        $param = ctrx_param;
+        if (str_starts_with($param, "api/") || str_starts_with($param, "ctrx.yro.ctrstorage.images/")) {
+            return "BE";
+        }
+        return "FE";
+    }
+}
+
+if (! function_exists("use_middleware")) {
+    function use_middleware(string $middleware)
+    {
+        $model = substr($middleware, -4) == ".php" ? $middleware : $middleware . ".php";
+        $ep = ctrx_endpoint();
+        $gfile = "";
+        if ($ep == "FE") $gfile = "views/app/middleware/";
+        else $gfile = "app/middleware/";
+        if (! \Classes\Ctrx::file_exists_strict($gfile . $model)) {
+            throw new Exception("Middleware '$middleware' not exist.!");
+        }
+        include $gfile . $model;
+    }
+}
+
+if (! function_exists("get_json")) {
+    function get_json(string $jsonfile, string $path = null)
+    {
+        if (! $path) {
+            $ep = ctr_endpoint();
+            if ($ep == "FE") {
+                $path = "_frontend/app/auto/json/";
+            } else {
+                $path = "_backend/application/json/";
+            }
+        }
+        $jsonfile = str_ends_with($jsonfile, ".json") ? $jsonfile : $jsonfile . ".json";
+        $json = file_get_contents($path . $jsonfile);
+        if (! $json) {
+            throw new Exception("Error on reading json file");
+        }
+        $data = json_decode($json, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $data;
+        } else {
+            throw new Exception(json_last_error_msg());
+        }
+        return null;
+    }
+}
+
+if (! function_exists("autoload_routing")) {
+    function autoload_routing(string|array $filename)
+    {
+        if (!$filename) {
+            return false;
+        }
+        $ep = ctr_endpoint();
+        $fl = "";
+        if ($ep == "FE") {
+            $fl = "_frontend/app/auto/routing/";
+        } else {
+            $fl = "_backend/application/routing/";
+        }
+        if (is_array($filename)) {
+            foreach ($filename as $f) {
+                $loadpage = substr($f, -4) == ".php" ? $f : $f . ".php";
+                if ($ep == "FE") {
+                    include $fl . $loadpage;
+                } else {
+                    include $fl . $loadpage;
+                }
+            }
+        } else {
+            $loadpage = substr($filename, -4) == ".php" ? $filename : $filename . ".php";
+            include $fl . $loadpage;
+        }
+    }
+}
+
+if (! function_exists("translation_icon")) {
+    function translation_icon(array|string|null $config = null)
+    {
+        $dbname = env("database");
+        if ($dbname) {
+            if ($config) {
+                if (is_string($config)) {
+                    extract([
+                        "element" => $config
+                    ]);
+                }
+                if (is_array($config)) {
+                    extract([
+                        "element" => $config['element'] ?? null,
+                        "bg" => $config['bg'] ?? null,
+                        "color" => $config['color'] ?? null
+                    ]);
+                }
+            }
+            include "views/core/partials/system/translationicon.php";
+        }
+    }
+}
+
+if (! function_exists("current_language")) {
+    function current_language()
+    {
+        return $_SESSION['ctrx_translate'] ?? null;
+    }
+}
+
+if (! function_exists("t")) {
+    function t(string|null $string, string|null $transform = null, bool|string $trim = true)
+    {
+        if ($trim) {
+            if (is_string($trim)) {
+                $string = trim($string ?? "", $trim);
+            } else {
+                $string = trim($string ?? "");
+            }
+        }
+
+        if (empty($string)) {
+            return $string;
+        }
+
+        if (!isset($_SESSION['ctrx_translate']) || !is_string($_SESSION['ctrx_translate'])) {
+            return $string;
+        }
+
+        $lang = $_SESSION['ctrx_translate'];
+        if (!$lang) return $string;
+
+        if (!isset($GLOBALS['ctrx_translations_loaded'])) {
+            \Classes\Ctrx::loadTranslations();
+        }
+
+        $smallString = strtolower($string);
+        $translated = $GLOBALS['ctrx_translations'][$lang][$smallString] ?? null;
+
+        if ($translated === null) {
+            return $string;
+        }
+
+        $rowstr = strtolower($translated);
+        $finalName = null;
+
+        if ($transform && is_string($transform)) {
+            if ($transform == "uc") {
+                $finalName = ucfirst($rowstr ?? '');
+            } else if ($transform == "l") {
+                $finalName = $rowstr;
+            } else if ($transform == "u") {
+                $finalName = strtoupper($rowstr ?? '');
+            } else if ($transform == "uw") {
+                $finalName = ucwords($rowstr ?? '');
+            } else {
+                $finalName = $rowstr;
+            }
+        } else {
+            if ($string === strtoupper($string)) {
+                $finalName = strtoupper($rowstr);
+            } elseif ($string === strtolower($string)) {
+                $finalName = strtolower($rowstr);
+            } elseif ($string === ucwords($string)) {
+                $finalName = ucwords($rowstr);
+            } elseif ($string === ucfirst($string)) {
+                $finalName = ucfirst($rowstr);
+            } else {
+                $finalName = $translated;
+            }
+        }
+        return $finalName ?? $string;
+    }
+}
+
+if (! function_exists("array_as_param")) {
+    function array_as_param(array $array)
+    {
+        $param = $array;
+        if ($array) {
+            $arr = [];
+            foreach ($param as $k => $v) {
+                $arr[] = $k . "=" . $v;
+            }
+            $parameter = implode("&", $arr);
+            return "?" . $parameter;
+        } else {
+            return "";
+        }
+    }
+}
+
+if (! function_exists("active_class")) {
+    function active_class(string $route, $class = "active")
+    {
+        $current = current_page(false);
+        $route = trim($route, "/");
+        $route = trim($route, "\\");
+        if ($route == $current) {
+            return "active";
+        } else {
+            return "";
+        }
+    }
+}
+
+/**
+ * db - for db import/export
+ * database - general database management
+ * translations - language translations
+ */
+if (! function_exists("ctrx_tools")) {
+    function ctrx_tools(string $tool)
+    {
+        if (str_starts_with($tool, "/")) {
+            return "/ctrxtools" . $tool;
+        } else {
+            return "/ctrxtools/" . $tool;
+        }
+    }
+}
+
+if(! function_exists("_bootstrap_css")){
+    function _bootstrap_css(bool $tag = true){
+        $asset = assets("_bootstrap/bootstrap.css");
+        if($tag){
+            return "<link rel='stylesheet' href='$asset'>";
+        }
+        return $asset;
+    }
+}
+
+if(! function_exists("_bootstrap_js")){
+    function _bootstrap_js(bool $tag = true){
+        $asset = assets("_bootstrap/bootstrap.js");
+        if($tag){
+            return "<script src='$asset'></script>";
+        }
+        return $asset;
+    }
+}
+
+define('page', page(""));

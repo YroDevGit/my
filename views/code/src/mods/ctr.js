@@ -1,0 +1,988 @@
+class CtrClass {
+
+    constructor(rootpath = "") {
+        this.global_root = rootpath;
+        this.frontend = "";
+        this.backend = "";
+        this.func = "";
+        this.cacheMap = new Map();
+    }
+
+    page($page = "", params = {}) {
+        if (!$page || $page == "/") {
+            return "/";
+        }
+        if (!$page.startsWith("/")) {
+            $page = "/" + $page;
+        }
+        let url = this.frontend + $page;
+        if (typeof params === "object" && Object.keys(params).length > 0) {
+            const query = Object.entries(params)
+                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                .join("&");
+            url += "?" + query;
+        }
+        return url;
+    }
+
+    generateRandom() {
+        const now = new Date();
+
+        const date =
+            now.getFullYear().toString().slice(-2) +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0') +
+            String(now.getHours()).padStart(2, '0') +
+            String(now.getMinutes()).padStart(2, '0') +
+            String(now.getSeconds()).padStart(2, '0') +
+            String(now.getMilliseconds()).padStart(3, '0');
+
+        const random = Math.random().toString(36).substring(2, 8);
+
+        return `CTR${date}${random}`;
+    }
+
+    async generateHash(max = 16) {
+        const id = this.generateRandom();
+        const buffer = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(id)
+        );
+        const hash = Array.from(new Uint8Array(buffer))
+            .map(b => b.toString(max).padStart(2, '0'))
+            .join('');
+
+        return hash;
+    }
+
+    async shortHash(max = 16) {
+        const id = this.generateRandom();
+
+        const buffer = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(id)
+        );
+
+        return Array.from(new Uint8Array(buffer))
+            .map(b => b.toString(max).padStart(2, '0'))
+            .join('')
+            .substring(0, max)
+            .toUpperCase();
+    }
+
+    generateUnique() {
+        const now = Date.now();
+        const uuid = crypto.randomUUID().replace(/-/g, '');
+
+        return `CTR${now}${uuid}`;
+    }
+
+    numberFormat(number, decimal = true, defaultValue = "0") {
+        if (number) {
+            if (decimal) {
+                return Number(number).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                });
+            }
+            return number;
+        }
+        if (decimal) {
+            return Number("0").toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+        return defaultValue;
+    }
+
+    backend($be = "", params = {}) {
+        let url = this.backend + $be;
+        if (typeof params === "object" && Object.keys(params).length > 0) {
+            const query = Object.entries(params)
+                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                .join("&");
+            url += (url.includes("?") ? "&" : "&") + query;
+        }
+        return url;
+    }
+
+    redirect(page = "", params = {}) {
+        if (!page.startsWith("/")) {
+            page = "/" + page;
+        }
+        window.location.href = this.page(page, params);
+    }
+
+    reload(hardRefresh = false) {
+        if (hardRefresh) {
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
+            }).then(() => {
+                location.reload(true);
+            });
+        }
+        else {
+            window.location.reload();
+        }
+    }
+
+    get refresh() {
+        this.reload();
+    }
+
+    funcpage($page = "", params = {}) {
+        let url = this.func + $page;
+        if (typeof params === "object" && Object.keys(params).length > 0) {
+            const query = Object.entries(params)
+                .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                .join("&");
+            url += (url.includes("?") ? "&" : "&") + query;
+        }
+        return url;
+    }
+
+    dom_loaded(callable) {
+        window.addEventListener("DOMContentLoaded", callable());
+    }
+
+    set_html(selector, strhtml) {
+        let elements = [];
+
+        if (typeof selector == "string") {
+            if (selector.charAt(0) === "#") {
+                const element = document.getElementById(selector.substring(1));
+                if (element) {
+                    elements.push(element);
+                }
+            } else if (selector.charAt(0) === ".") {
+                elements = Array.from(document.querySelectorAll(selector));
+            } else {
+                const element = document.getElementById(selector);
+                if (element) {
+                    elements.push(element);
+                }
+            }
+        } else if (selector instanceof HTMLElement) {
+            elements.push(selector);
+        } else if (Array.isArray(selector)) {
+            selector.forEach(sel => {
+                elements.push(sel);
+            });
+        }
+
+        if (elements.length > 0) {
+            elements.forEach(element => {
+                if (strhtml instanceof HTMLElement) {
+                    element.innerHTML = "";
+                    element.appendChild(strhtml);
+                } else {
+                    element.innerHTML = strhtml;
+                }
+            });
+        } else {
+            console.warn(`No elements found for selector: "${selector}"`);
+        }
+    }
+
+    /**
+        Ctr.set_loading(true, "#mapContainer", 32, { 
+            preserveMethod: 'wrapper'  // For complex widgets
+        });
+        Ctr.set_loading(true, "#simpleTable", 24, { 
+            preserveMethod: 'height'   // For simple tables
+        });
+     */
+    set_loading(isLoading, selector, size = 24, options = {}) {
+        let elements = [];
+        let border = 3;
+        if (size <= 10) {
+            border = 2;
+        } else if (size <= 20) {
+            border = 3;
+        } else if (size <= 30) {
+            border = 4;
+        } else if (size <= 40) {
+            border = 5;
+        } else if (size <= 50) {
+            border = 6;
+        } else {
+            border = 7;
+        }
+
+        const defaults = {
+            preserveMethod: 'wrapper',
+            preserveScrollPosition: true,
+            loadingBackground: "rgb(248, 250, 252,0)",
+            loadingText: '',
+            minHeight: 100
+        };
+        const config = { ...defaults, ...options };
+
+        if (typeof selector == "string") {
+            if (selector.charAt(0) === "#") {
+                const element = document.getElementById(selector.substring(1));
+                if (element) {
+                    elements.push(element);
+                }
+            } else if (selector.charAt(0) === ".") {
+                elements = Array.from(document.querySelectorAll(selector));
+            } else {
+                const element = document.getElementById(selector);
+                if (element) {
+                    elements.push(element);
+                }
+            }
+        } else if (selector instanceof HTMLElement) {
+            elements.push(selector);
+        } else if (Array.isArray(selector)) {
+            selector.forEach(sel => {
+                elements.push(sel);
+            });
+        }
+
+        if (elements.length === 0) {
+            console.warn(`No elements found for selector: "${selector}"`);
+            return;
+        }
+
+        elements.forEach(element => {
+            if (isLoading) {
+                if (!this.cacheMap.has(element)) {
+                    const rect = element.getBoundingClientRect();
+                    const computedStyle = getComputedStyle(element);
+
+                    if (config.preserveMethod === 'wrapper') {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'loading-wrapper';
+
+                        const wrapperStyles = {
+                            display: 'block',
+                            width: rect.width + 'px',
+                            minHeight: Math.max(rect.height, config.minHeight) + 'px',
+                            height: computedStyle.height || 'auto',
+                            position: 'relative',
+                            boxSizing: 'border-box'
+                        };
+
+                        Object.keys(wrapperStyles).forEach(key => {
+                            wrapper.style[key] = wrapperStyles[key];
+                        });
+
+                        element.parentNode.insertBefore(wrapper, element);
+                        wrapper.appendChild(element);
+
+                        this.cacheMap.set(element, {
+                            method: 'wrapper',
+                            wrapper: wrapper,
+                            originalDisplay: element.style.display || computedStyle.display,
+                            scrollTop: config.preserveScrollPosition ? window.pageYOffset || document.documentElement.scrollTop : 0
+                        });
+                    } else {
+                        const originalDisplay = element.style.display || computedStyle.display;
+                        const originalHeight = element.style.height || computedStyle.height;
+                        const originalMinHeight = element.style.minHeight || computedStyle.minHeight;
+                        const originalPadding = element.style.padding || computedStyle.padding;
+                        const originalMargin = element.style.margin || computedStyle.margin;
+                        const originalOverflow = element.style.overflow || computedStyle.overflow;
+
+                        this.cacheMap.set(element, {
+                            method: 'height',
+                            originalDisplay: originalDisplay,
+                            originalHeight: originalHeight,
+                            originalMinHeight: originalMinHeight,
+                            originalPadding: originalPadding,
+                            originalMargin: originalMargin,
+                            originalOverflow: originalOverflow,
+                            rectHeight: rect.height,
+                            rectWidth: rect.width,
+                            scrollTop: config.preserveScrollPosition ? window.pageYOffset || document.documentElement.scrollTop : 0
+                        });
+                    }
+                }
+
+                const cache = this.cacheMap.get(element);
+
+                if (config.preserveMethod === 'wrapper') {
+                    const child = cache.wrapper.querySelector(':scope > *');
+                    if (child) {
+                        child.style.display = 'none';
+                    }
+
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'loading-indicator';
+                    loadingDiv.style.cssText = `
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 2rem;
+                        gap: 0.75rem;
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: ${config.loadingBackground};
+                        border-radius: 6px;
+                        flex-direction: ${config.loadingText ? 'column' : 'row'};
+                    `;
+
+                    let spinnerHTML = `
+                        <div style="
+                            width: ${size}px;
+                            height: ${size}px;
+                            border: ${border}px solid #e2e8f0;
+                            border-top-color: ${config.color ?? "#287217"};
+                            border-radius: 50%;
+                            animation: spin 0.8s linear infinite;
+                            flex-shrink: 0;
+                        "></div>
+                    `;
+
+                    if (config.loadingText) {
+                        spinnerHTML += `
+                            <span style="color: #64748b; font-size: 0.95rem; margin-top: 0.5rem;">
+                                ${config.loadingText}
+                            </span>
+                        `;
+                    }
+
+                    loadingDiv.innerHTML = spinnerHTML + `
+                        <style>
+                            @keyframes spin {
+                                to { transform: rotate(360deg); }
+                            }
+                        </style>
+                    `;
+
+                    cache.wrapper.appendChild(loadingDiv);
+                    cache.loadingElement = loadingDiv;
+
+                } else {
+                    element.style.display = 'none';
+
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'loading-container';
+
+                    let minHeight = Math.max(cache.rectHeight, config.minHeight) + 'px';
+                    if (cache.originalHeight && cache.originalHeight !== 'auto') {
+                        minHeight = cache.originalHeight;
+                    }
+
+                    loadingDiv.style.cssText = `
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 2rem;
+                        gap: 0.75rem;
+                        min-height: ${minHeight};
+                        height: ${cache.originalHeight || 'auto'};
+                        width: ${cache.rectWidth}px;
+                        box-sizing: border-box;
+                        background: ${config.loadingBackground};
+                        border-radius: 6px;
+                        flex-direction: ${config.loadingText ? 'column' : 'row'};
+                    `;
+
+                    let spinnerHTML = `
+                        <div style="
+                            width: ${size}px;
+                            height: ${size}px;
+                            border: ${border}px solid #e2e8f0;
+                            border-top-color: #00ccff;
+                            border-radius: 50%;
+                            animation: spin 0.8s linear infinite;
+                            flex-shrink: 0;
+                        "></div>
+                    `;
+
+                    if (config.loadingText) {
+                        spinnerHTML += `
+                            <span style="color: #64748b; font-size: 0.95rem; margin-top: 0.5rem;">
+                                ${config.loadingText}
+                            </span>
+                        `;
+                    }
+
+                    loadingDiv.innerHTML = spinnerHTML + `
+                        <style>
+                            @keyframes spin {
+                                to { transform: rotate(360deg); }
+                            }
+                        </style>
+                    `;
+
+                    element.parentNode.insertBefore(loadingDiv, element.nextSibling);
+                    cache.loadingElement = loadingDiv;
+                }
+
+                if (config.preserveScrollPosition && cache.scrollTop) {
+                    window.scrollTo(0, cache.scrollTop);
+                }
+
+            } else {
+                if (this.cacheMap.has(element)) {
+                    const cache = this.cacheMap.get(element);
+
+                    if (cache.loadingElement && cache.loadingElement.parentNode) {
+                        cache.loadingElement.remove();
+                    }
+
+                    if (cache.method === 'wrapper') {
+                        const child = cache.wrapper.querySelector(':scope > *');
+                        if (child) {
+                            child.style.display = cache.originalDisplay || '';
+                        }
+
+                        cache.wrapper.parentNode.insertBefore(element, cache.wrapper);
+                        cache.wrapper.remove();
+                    } else {
+                        element.style.display = cache.originalDisplay || '';
+                        if (cache.originalHeight) {
+                            element.style.height = cache.originalHeight;
+                        }
+                        if (cache.originalMinHeight) {
+                            element.style.minHeight = cache.originalMinHeight;
+                        }
+                        if (cache.originalPadding) {
+                            element.style.padding = cache.originalPadding;
+                        }
+                        if (cache.originalMargin) {
+                            element.style.margin = cache.originalMargin;
+                        }
+                        if (cache.originalOverflow) {
+                            element.style.overflow = cache.originalOverflow;
+                        }
+                    }
+
+                    if (config.preserveScrollPosition && cache.scrollTop) {
+                        window.scrollTo(0, cache.scrollTop);
+                    }
+
+                    this.cacheMap.delete(element);
+                } else {
+                    console.warn(`No cached content found for element: "${selector}"`);
+                }
+            }
+        });
+    }
+
+    redirect_logout(page = null) {
+        let path = "/ctrx/logout";
+        if (page && typeof page == "string") {
+            path = page + "?page=" + page;
+        }
+        location.href = path;
+    }
+
+    logout(page = null) {
+        let path = "/ctrx/logout";
+        if (page && typeof page == "string") {
+            path = page + "?page=" + page;
+        }
+        return path;
+    }
+
+    add_html(selector, strhtml) {
+        let elements = [];
+
+        if (typeof selector == "string") {
+            if (selector.charAt(0) === "#") {
+                const element = document.getElementById(selector.substring(1));
+                if (element) {
+                    elements.push(element);
+                }
+            } else if (selector.charAt(0) === ".") {
+                elements = Array.from(document.querySelectorAll(selector));
+            } else {
+                const element = document.getElementById(selector);
+                if (element) {
+                    elements.push(element);
+                }
+            }
+        } else if (selector instanceof HTMLElement) {
+            elements.push(selector);
+        } else if (Array.isArray(selector)) {
+            selector.forEach(sel => {
+                elements.push(sel);
+            });
+        }
+
+        if (elements.length > 0) {
+            elements.forEach(element => {
+                if (strhtml instanceof HTMLElement) {
+                    element.appendChild(strhtml);
+                } else {
+                    element.insertAdjacentHTML('beforeend', strhtml);
+                }
+            });
+        } else {
+            console.warn(`No elements found for selector: "${selector}"`);
+        }
+    }
+
+    loaded(callable) {
+        window.addEventListener("DOMContentLoaded", function () {
+            callable();
+        });
+    }
+
+    click(selector, callable) {
+        if (typeof selector == "string") {
+            let form = null;
+            if (selector.charAt(0) === "#" || selector.charAt(0) === ".") {
+                form = document.querySelectorAll(selector);
+                form.forEach(element => {
+                    const attrs = {};
+                    for (let attr of element.attributes) {
+                        attrs[attr.name] = attr.value;
+                    }
+                    element.addEventListener("click", function () {
+                        callable(element, attrs);
+                    });
+                });
+            } else {
+                form = document.getElementById(selector);
+                const attrs = {};
+                for (let attr of form.attributes) {
+                    attrs[attr.name] = attr.value;
+                }
+                form.addEventListener("click", function () {
+                    callable(form, attrs);
+                });
+            }
+        } else if (selector instanceof HTMLElement) {
+            selector.addEventListener("click", () => {
+                const attrs = {};
+                for (let attr of selector.attributes) {
+                    attrs[attr.name] = attr.value;
+                }
+                callable(selector, attrs);
+            })
+        }
+    }
+
+    to_object(data) {
+        if (data instanceof FormData) {
+            return Object.fromEntries(data.entries());
+        }
+        return data;
+    }
+
+    scroll_to_element(selector, offset = 0) {
+        let elements = [];
+
+        if (typeof selector === "string") {
+            elements = Array.from(document.querySelectorAll(selector));
+        } else if (selector instanceof HTMLElement) {
+            elements = [selector];
+        } else if (Array.isArray(selector)) {
+            elements = selector.filter(el => el instanceof HTMLElement);
+        }
+
+        let el = document.querySelector(selector);
+        if (!el) return;
+
+        const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
+
+        window.scrollTo({
+            top: y,
+            behavior: "smooth"
+        });
+    }
+
+    scroll_to_top(top = 0, behavior = "smooth") {
+        window.scrollTo({
+            top: top,
+            behavior: behavior
+        });
+    }
+
+    scroll_to_bottom(reduce = 0, behavior = "smooth") {
+        window.scrollTo({
+            top: document.body.scrollHeight - reduce,
+            behavior: behavior
+        });
+    }
+
+    reverse_object(object) {
+        let reversed = Object.fromEntries(
+            Object.entries(object).reverse()
+        );
+        return reversed;
+    }
+
+    submit(selector, callable, clean = true) {
+        let elements = [];
+
+        if (typeof selector === "string") {
+            elements = Array.from(document.querySelectorAll(selector));
+        } else if (selector instanceof HTMLElement) {
+            elements = [selector];
+        } else if (Array.isArray(selector)) {
+            elements = selector.filter(el => el instanceof HTMLElement);
+        }
+
+        const handleSubmit = (element) => (event) => {
+            event.preventDefault();
+            const formData = new FormData(element);
+            const dataObject = Object.fromEntries(formData.entries());
+            callable(formData, dataObject, element, event);
+        };
+
+        elements.forEach(element => {
+            if (element.tagName !== "FORM") return;
+
+            if (clean && element._submitHandler) {
+                element.removeEventListener('submit', element._submitHandler);
+            }
+            const boundHandler = handleSubmit(element);
+            element._submitHandler = boundHandler;
+            element.addEventListener('submit', boundHandler);
+        });
+    }
+
+    apply(...callable) {
+        callable.forEach(call => {
+            if (typeof call !== "function") {
+                return;
+            }
+            call();
+        });
+    }
+
+    setOptions(selector, {
+        options = null,
+        config = { value: "id", label: "fullname" },
+        placeholder = "Select item",
+        value = "",
+        onChange = undefined,
+        ...rest
+    } = {}) {
+
+        const elements = document.querySelectorAll(selector);
+        const valKey = config.value ?? "id";
+        const labKey = config.label ?? "fullname";
+
+        if (onChange && typeof onChange === "function") {
+            elements.forEach(element => {
+                element.addEventListener("change", () => {
+                    const selectedValue = element.value;
+                    const selectedOption = element.options[element.selectedIndex];
+                    const selectedLabel = selectedOption ? selectedOption.textContent : "";
+                    onChange(element, { value: selectedValue, label: selectedLabel });
+                });
+            });
+        }
+
+        elements.forEach(element => {
+            if (options === null || options === undefined) {
+                if (value !== undefined && value !== "") {
+                    element.value = value;
+                }
+                return;
+            }
+            const existingOptions = element.querySelectorAll('option[opt]');
+            element.innerHTML = "";
+            if (Array.isArray(options)) {
+                const allOptions = element.querySelectorAll('option');
+
+                allOptions.forEach(opt => {
+                    if (!opt.hasAttribute('opt')) {
+                        opt.remove();
+                    }
+                });
+
+                if (placeholder && typeof placeholder == "string" && !element.multiple) {
+                    const placeholderText = placeholder ?? "Select item";
+                    const placeholderOption = document.createElement('option');
+                    placeholderOption.value = "";
+                    placeholderOption.textContent = placeholderText;
+                    element.appendChild(placeholderOption);
+                }
+
+                existingOptions.forEach(opt => {
+                    element.appendChild(opt.cloneNode(true));
+                });
+
+                options.forEach(row => {
+                    const option = document.createElement('option');
+                    option.value = row[valKey] ?? "";
+                    option.textContent = row[labKey] ?? "";
+                    element.appendChild(option);
+                });
+
+                if (value !== undefined && value !== "") {
+                    element.value = value;
+                }
+            }
+        });
+
+        if (Object.keys(rest).length > 0) {
+            elements.forEach(element => {
+                Object.keys(rest).forEach(key => {
+                    element.dataset[key] = rest[key];
+                });
+            });
+        }
+    }
+
+    set_value(selector, value) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            element.value = value;
+            const event = new Event('change', { bubbles: true });
+            element.dispatchEvent(event);
+        });
+    }
+
+    base_url(path = null) {
+        if (path) {
+            return path.startsWith("/") ? window.location.origin + path : window.location.origin + "/" + path;
+        }
+        return window.location.origin;
+    }
+
+    form_data(selector) {
+        let form = null;
+        if (selector.charAt(0) === "#" || selector.charAt(0) === ".") {
+            form = document.querySelector(selector);
+        } else {
+            form = document.querySelector(`#${selector}`);
+        }
+
+        if (!form) return null;
+
+        const formData = new FormData(form);
+
+        const dataObject = {};
+        formData.forEach((value, key) => {
+            dataObject[key] = value;
+        });
+
+        return dataObject;
+    }
+
+    open_window(url, target = null) {
+        if (!target) {
+            window.location.href = url;
+        } else {
+            if (typeof target == "string") {
+                window.open(url, target);
+            }
+        }
+
+    }
+
+    get_selected(selector, type = null) {
+        const select = document.querySelector(selector);
+        if (!select) return null;
+
+        if (select.multiple) {
+            const selectedOptions = Array.from(select.selectedOptions);
+            const values = selectedOptions.map(opt => opt.value);
+            const labels = selectedOptions.map(opt => opt.text);
+
+            if (type == null) {
+                return {
+                    values: values,
+                    labels: labels,
+                    selected: selectedOptions.map(opt => ({
+                        value: opt.value,
+                        label: opt.text
+                    }))
+                };
+            }
+            if (typeof type === "string") {
+                if (type === "value" || type === "values") {
+                    return values;
+                }
+                if (type === "label" || type === "labels") {
+                    return labels;
+                }
+                if (type === "full" || type === "all") {
+                    return selectedOptions.map(opt => ({
+                        value: opt.value,
+                        label: opt.text
+                    }));
+                }
+                return null;
+            }
+            return null;
+        }
+
+        const value = select.value ?? null;
+        const label = select?.options[select.selectedIndex]?.text ?? null;
+
+        if (type == null) {
+            return { value: value, label: label };
+        }
+        if (typeof type === "string") {
+            if (type === "value") {
+                return value;
+            }
+            if (type === "label") {
+                return label;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    empty_obect(object) {
+        try {
+            return Object.keys(object).length > 0;
+        } catch (err) {
+            console.warn(`empty_object: '${object}' has an issue`, err);
+            return true;
+        }
+    }
+
+    empty_array(array) {
+        try {
+            return array.length === 0;
+        } catch (err) {
+            console.warn(`empty_object: '${array}' has an issue`, err);
+            return true;
+        }
+    }
+
+    is_empty(data) {
+        if (Array.isArray(data)) {
+            return data.length === 0 ? true : false
+        } else if (data && typeof data === "object") {
+            return Object.keys(data).length === 0
+                ? true
+                : false
+        }
+    }
+
+    form_object(selector) {
+        const element = document.querySelector(selector);
+        const formdata = new FormData(element);
+        return formdata;
+    }
+
+    storage_set(name, item) {
+        localStorage.setItem(name, item);
+    }
+
+    storage_get(name) {
+        return localStorage.getItem(name);
+    }
+
+    storage_clear() {
+        localStorage.clear();
+    }
+
+    storage_remove(name) {
+        localStorage.removeItem(name);
+    }
+    $(selector) {
+        return document.querySelector(selector);
+    }
+    $all(selector) {
+        return document.querySelectorAll(selector);
+    }
+    load(callable) {
+        window.addEventListener("DOMContentLoaded", function () {
+            callable();
+        });
+    }
+
+    value(selector) {
+        try {
+            let val = document.querySelector(selector).value;
+            return val;
+        } catch (err) {
+            console.warn(`value: '${selector}' has an issue`, err);
+            return null;
+        }
+    }
+
+    log(...message) {
+        console.log(...message);
+    }
+
+    err(...message) {
+        console.error(...message);
+    }
+
+    child(selector) {
+        try {
+            let val = document.querySelector(selector).innerHTML;
+            return val;
+        } catch (err) {
+            console.warn(`child: '${selector}' has an issue`, err);
+            return null;
+        }
+    }
+
+    parentAndChild(selector) {
+        try {
+            let val = document.querySelector(selector).outerHTML;
+            return val;
+        } catch (err) {
+            console.warn(`parentAndChild: '${selector}' has an issue`, err);
+            return null;
+        }
+    }
+
+    errStr(str = null, errorString = "err_") {
+        if (!str) return errorString;
+        if (typeof str == "string") {
+            return `${errorString}${str}`;
+        }
+    }
+    errStrId(str = null, errorString = "err_") {
+        if (!str) return `#${errorString}`;
+        if (typeof str == "string") {
+            return `#${errorString}${str}`;
+        }
+    }
+
+    errStrSet(str = null, value, errorString = "err_") {
+        try {
+            if (str && typeof str == "string") {
+                if (str.startsWith("#")) {
+                    document.querySelector(`${str}`).innerHTML = value;
+                } else {
+                    document.querySelector(`#${errorString}${str}`).innerHTML = value;
+                }
+            }
+        } catch (err) {
+            console.warn(`errStrSet: '${str}' has an issue`, err);
+        }
+    }
+
+    resetErrorStr(errorClass = "error_text") {
+        try {
+            let elm = undefined;
+            if (errorClass.startsWith(".")) {
+                elm = document.querySelectorAll(errorClass);
+            } else {
+                elm = document.querySelectorAll(`.${errorClass}`);
+            }
+            elm.forEach(element => {
+                element.innerHTML = "";
+            });
+        } catch (err) {
+            console.warn("resetErrorStr has an issue", err);
+        }
+    }
+}
+
+const CTR = new CtrClass();
+const Ctr = CTR;
+const Ctrx = CTR;
+
+if (typeof window !== "undefined") {
+    window.Ctr = CTR;
+}
+
+if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
+    module.exports = Ctr;
+}
+
+export { Ctrx };
+export default Ctr;

@@ -1,0 +1,120 @@
+ /* custom styles – only for fine‑tuning, no Bootstrap overrides */
+ body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f8faff;
+  }
+  .brand-gradient {
+    background: linear-gradient(145deg, #0b1e3a 0%, #1b3a6b 100%);
+  }
+  .hero-headline {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .hero-sub {
+    font-size: 1.2rem;
+    line-height: 1.6;
+  }
+  .service-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    border-radius: 1.25rem;
+    background: white;
+    box-shadow: 0 8px 24px rgba(0,20,50,0.06);
+  }
+  .service-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(0,20,50,0.10);
+  }
+  .service-icon {
+    font-size: 2.6rem;
+    color: #1b3a6b;
+  }
+  .section-title {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #0b1e3a;
+  }
+  .section-sub {
+    color: #4a5b7a;
+  }
+  .btn-primary-custom {
+    background-color: #1b3a6b;
+    border-color: #1b3a6b;
+    color: white;
+    font-weight: 500;
+    padding: 0.7rem 2rem;
+    border-radius: 50px;
+    transition: 0.2s;
+  }
+  .btn-primary-custom:hover {
+    background-color: #0f2a4f;
+    border-color: #0f2a4f;
+    color: white;
+    transform: scale(1.02);
+  }
+  .btn-outline-custom {
+    border: 2px solid #1b3a6b;
+    color: #1b3a6b;
+    font-weight: 500;
+    padding: 0.7rem 2rem;
+    border-radius: 50px;
+    transition: 0.2s;
+  }
+  .btn-outline-custom:hover {
+    background-color: #1b3a6b;
+    color: white;
+  }
+  .pill-badge {
+    background: #eaf0fa;
+    color: #1b3a6b;
+    font-weight: 500;
+    padding: 0.4rem 1.2rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+  }
+  .footer-link {
+    color: #b6cae3;
+    text-decoration: none;
+    transition: 0.2s;
+  }
+  .footer-link:hover {
+    color: white;
+  }
+  .process-step {
+    background: white;
+    border-radius: 2rem;
+    padding: 1.8rem 1.5rem;
+    height: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    border: 1px solid rgba(27,58,107,0.06);
+  }
+  .step-number {
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: #d0ddec;
+    margin-right: 0.5rem;
+  }
+  .testimonial-quote {
+    font-size: 1.05rem;
+    font-style: italic;
+    color: #1e2f47;
+  }
+  .bg-soft-blue {
+    background-color: #f0f5fe;
+  }
+  .cta-section {
+    background: linear-gradient(135deg, #0b1e3a 0%, #1f4279 100%);
+    border-radius: 2.5rem;
+  }
+  /* small extras */
+  .border-radius-3xl {
+    border-radius: 2rem;
+  }
+  .text-shadow-sm {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  @media (max-width: 576px) {
+    .hero-headline {
+      font-size: 2.2rem;
+    }
+  }
