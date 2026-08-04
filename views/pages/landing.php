@@ -6,7 +6,9 @@
   <title>CodeYro · custom web apps & hosting</title>
   <?=_bootstrap_css()?>
   <!-- Font Awesome 6 (free icons) -->
+  <?= assets_css('landing') ?>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 </head>
 <body>
 
