@@ -41,7 +41,7 @@
     <div class="container py-3 py-md-5">
       <div class="row align-items-center g-5">
         <div class="col-lg-7">
-          <span class="pill-badge bg-white bg-opacity-15 text-white mb-3 d-inline-block">
+          <span class="pill-badge text-dark bg-white bg-opacity-15 mb-3 d-inline-block">
             <i class="fas fa-rocket me-2"></i>Launch your next web app
           </span>
           <h1 class="display-3 fw-bold hero-headline mb-3">
@@ -70,9 +70,9 @@
             <i class="fas fa-cubes" style="font-size: 5rem; color: #aac7ff;"></i>
             <p class="mt-3 text-white-50 fw-light">web apps · hosting · APIs</p>
             <div class="d-flex justify-content-center gap-4 mt-2">
-              <span class="badge bg-white bg-opacity-15 text-white p-2 px-3 rounded-pill">React</span>
-              <span class="badge bg-white bg-opacity-15 text-white p-2 px-3 rounded-pill">Node</span>
-              <span class="badge bg-white bg-opacity-15 text-white p-2 px-3 rounded-pill">Python</span>
+              <span class="badge bg-white bg-opacity-15 text-dark p-2 px-3 rounded-pill">Node</span>
+              <span class="badge bg-white bg-opacity-15 text-dark p-2 px-3 rounded-pill">PHP</span>
+              <span class="badge bg-white bg-opacity-15 text-dark p-2 px-3 rounded-pill">Python</span>
             </div>
           </div>
         </div>
@@ -252,7 +252,7 @@
                 <i class="fas fa-calendar-check me-2"></i> Book a call
               </a>
               <a href="#" class="btn btn-outline-light btn-lg rounded-pill px-5 py-3">
-                <i class="fas fa-envelope me-2"></i> hello@codeyro.dev
+                <i class="fas fa-envelope me-2"></i> <?=variable('email')?>
               </a>
             </div>
           </div>
@@ -300,8 +300,8 @@
         </div>
         <div class="col-md-4">
           <h6 class="fw-semibold">Let’s connect</h6>
-          <p class="small opacity-75"><i class="fas fa-envelope me-2"></i>hello@codeyro.dev</p>
-          <p class="small opacity-75"><i class="fas fa-phone me-2"></i>+1 (555) 234‑5678</p>
+          <p class="small opacity-75"><i class="fas fa-envelope me-2"></i><?=variable('email')?></p>
+          <p class="small opacity-75"><i class="fas fa-phone me-2"></i><?=variable('phone')?></p>
           <p class="small opacity-75"><i class="fas fa-map-pin me-2"></i>Remote · available worldwide</p>
         </div>
       </div>
@@ -313,25 +313,7 @@
   </footer>
 
   <!-- Bootstrap JS (for toggling, etc.) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- tiny JS for interactive enhancement (optional) -->
-  <script>
-    (function() {
-      // simple console greeting – no external libraries
-      console.log('🚀 CodeYro – custom web apps & hosting.');
-      // optional: smooth anchor scroll (lightweight)
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-          const href = this.getAttribute('href');
-          if (href === '#') return;
-          const target = document.querySelector(href);
-          if (target) {
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        });
-      });
-    })();
-  </script>
+  <?=_bootstrap_js()?>
+  <?=js()?>
 </body>
 </html>
