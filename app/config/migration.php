@@ -6,3 +6,28 @@ Migration::table_ts("logs", [
     "message" => ["varchar"=>800],
     "status" => ["int"=>11, "default" => 1]
 ]);
+
+Migration::table_ts("emails", [
+    "id" => PK,
+    "email" => VARCHAR,
+    "fname" => VARCHAR,
+    "lname" => VARCHAR,
+    "message" => ["varchar" => 500],
+], true);
+
+Migration::table_ts("users", [
+    "id" => PK,
+    "email" => VARCHAR,
+    "password" => VARCHAR,
+    "type" => INTEGER,
+    "fname" => VARCHAR,
+    "lname" => VARCHAR,
+], true);
+
+Migration::table_ts("roles", [
+    "id" => PK,
+    "role_code" => VARCHAR,
+    "role_title" => VARCHAR,
+    "role_desc" => VARCHAR,
+    "redirect" => VARCHAR
+]);

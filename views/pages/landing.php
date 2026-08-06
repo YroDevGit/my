@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CodeYro · custom web apps & hosting</title>
-  <?=_bootstrap_css()?>
+  <?= _bootstrap_css() ?>
   <!-- Font Awesome 6 (free icons) -->
   <?= assets_css('landing') ?>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 </head>
+
 <body>
 
   <!-- ========== NAVBAR ========== -->
@@ -18,8 +20,8 @@
       <a class="navbar-brand fw-bold fs-3" href="#">
         <i class="fas fa-code me-2"></i>CodeYro
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" 
-              aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"
+        aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navMenu">
@@ -48,7 +50,7 @@
             Custom web apps <br>that <span style="border-bottom: 4px solid #68a0ff;">scale</span> your business
           </h1>
           <p class="lead hero-sub opacity-90 mb-4 pe-lg-5">
-            From custom dashboards to full‑stack platforms — we build, host, and maintain 
+            From custom dashboards to full‑stack platforms — we build, host, and maintain
             web applications tailored to your workflow.
           </p>
           <div class="d-flex flex-wrap gap-3">
@@ -95,8 +97,8 @@
           <div class="service-card p-4 h-100">
             <div class="service-icon mb-3"><i class="fas fa-laptop-code"></i></div>
             <h4 class="fw-bold">Custom web applications</h4>
-            <p class="text-secondary">Tailor‑made dashboards, internal tools, client portals, and SaaS platforms. 
-            Built with modern stacks and clean UX.</p>
+            <p class="text-secondary">Tailor‑made dashboards, internal tools, client portals, and SaaS platforms.
+              Built with modern stacks and clean UX.</p>
             <ul class="list-unstyled small text-secondary">
               <li><i class="fas fa-check text-primary me-2"></i>User authentication & roles</li>
               <li><i class="fas fa-check text-primary me-2"></i>API integrations (CRM, payment, etc.)</li>
@@ -109,8 +111,8 @@
           <div class="service-card p-4 h-100">
             <div class="service-icon mb-3"><i class="fas fa-server"></i></div>
             <h4 class="fw-bold">Web hosting & DevOps</h4>
-            <p class="text-secondary">Reliable cloud hosting, deployment pipelines, and 24/7 monitoring. 
-            We handle the infrastructure so your app stays fast.</p>
+            <p class="text-secondary">Reliable cloud hosting, deployment pipelines, and 24/7 monitoring.
+              We handle the infrastructure so your app stays fast.</p>
             <ul class="list-unstyled small text-secondary">
               <li><i class="fas fa-check text-primary me-2"></i>AWS / DigitalOcean / VPS</li>
               <li><i class="fas fa-check text-primary me-2"></i>Automatic SSL & backups</li>
@@ -123,8 +125,8 @@
           <div class="service-card p-4 h-100">
             <div class="service-icon mb-3"><i class="fas fa-arrows-spin"></i></div>
             <h4 class="fw-bold">Maintenance & evolution</h4>
-            <p class="text-secondary">Post‑launch support, feature updates, performance tuning, and bug fixes. 
-            Keep your app healthy and growing.</p>
+            <p class="text-secondary">Post‑launch support, feature updates, performance tuning, and bug fixes.
+              Keep your app healthy and growing.</p>
             <ul class="list-unstyled small text-secondary">
               <li><i class="fas fa-check text-primary me-2"></i>Monthly retainer plans</li>
               <li><i class="fas fa-check text-primary me-2"></i>Security patches & updates</li>
@@ -251,9 +253,9 @@
               <a href="#" class="btn btn-light btn-lg rounded-pill px-5 py-3 fw-bold text-dark">
                 <i class="fas fa-calendar-check me-2"></i> Book a call
               </a>
-              <a href="#" class="btn btn-outline-light btn-lg rounded-pill px-5 py-3">
-                <i class="fas fa-envelope me-2"></i> <?=variable('email')?>
-              </a>
+              <span class="btn btn-outline-light btn-lg rounded-pill px-5 py-3 email-modal">
+                <i class="fas fa-envelope me-2"></i> <?= variable('email') ?>
+              </span>
             </div>
           </div>
           <div class="col-lg-5 text-lg-end">
@@ -300,8 +302,8 @@
         </div>
         <div class="col-md-4">
           <h6 class="fw-semibold">Let’s connect</h6>
-          <p class="small opacity-75"><i class="fas fa-envelope me-2"></i><?=variable('email')?></p>
-          <p class="small opacity-75"><i class="fas fa-phone me-2"></i><?=variable('phone')?></p>
+          <p class="small opacity-75 email-modal"><i class="fas fa-envelope me-2"></i><?= variable('email') ?></p>
+          <p class="small opacity-75"><i class="fas fa-phone me-2"></i><?= variable('phone') ?></p>
           <p class="small opacity-75"><i class="fas fa-map-pin me-2"></i>Remote · available worldwide</p>
         </div>
       </div>
@@ -313,7 +315,8 @@
   </footer>
 
   <!-- Bootstrap JS (for toggling, etc.) -->
-  <?=_bootstrap_js()?>
-  <?=js()?>
+  <?= _bootstrap_js() ?>
+  <?= js() ?>
 </body>
+
 </html>

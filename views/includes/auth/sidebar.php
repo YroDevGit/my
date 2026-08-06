@@ -1,0 +1,53 @@
+ <!-- ===== SIDEBAR ===== -->
+ <nav class="sidebar" id="sidebar">
+     <!-- brand -->
+     <div class="sidebar-brand d-flex align-items-center">
+         <i class="fas fa-code brand-icon"></i>
+         <span class="brand-text">CodeYro</span>
+     </div>
+
+     <!-- navigation -->
+     <div class="mt-2">
+         <div class="nav-section-title">Main</div>
+         <a href="#" class="nav-link active">
+             <i class="fas fa-th-large"></i>
+             <span class="nav-text">Dashboard</span>
+         </a>
+         <a href="#" class="nav-link">
+             <i class="fas fa-project-diagram"></i>
+             <span class="nav-text">Projects</span>
+         </a>
+         <a href="#" class="nav-link">
+             <i class="fas fa-users"></i>
+             <span class="nav-text">Clients</span>
+         </a>
+         <a href="#" class="nav-link">
+             <i class="fas fa-tasks"></i>
+             <span class="nav-text">Tasks</span>
+         </a>
+
+         <div class="nav-section-title mt-3">Management</div>
+         <a href="#" class="nav-link">
+             <i class="fas fa-server"></i>
+             <span class="nav-text">Hosting</span>
+         </a>
+         <a href="#" class="nav-link">
+             <i class="fas fa-chart-line"></i>
+             <span class="nav-text">Analytics</span>
+         </a>
+         <a href="#" class="nav-link">
+             <i class="fas fa-cog"></i>
+             <span class="nav-text">Settings</span>
+         </a>
+
+         <div class="nav-section-title mt-3">Support</div>
+         <a href="#" class="nav-link">
+             <i class="fas fa-question-circle"></i>
+             <span class="nav-text">Help</span>
+         </a>
+         <a href="/login" class="nav-link">
+             <i class="fas fa-sign-out-alt"></i>
+             <span class="nav-text">Logout</span>
+         </a>
+     </div>
+ </nav>
