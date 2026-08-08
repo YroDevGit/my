@@ -2,6 +2,7 @@
 
 //Add codes here...
 
+use Classes\Ctrx;
 use Classes\Response;
 use Classes\Validator;
 use Tables\Emails;
@@ -17,5 +18,7 @@ Emails::insert([
     "email" => $email,
     "message" => $message
 ]);
+
+Ctrx::throttle(1, 300);
 
 Response::code(200)->send();

@@ -1,8 +1,10 @@
 import Ctr, { Ctrx } from "../code/src/mods/ctr";
-import TModal from "../code/src/mods/modals/tmodal";
 import { Twal } from "../code/src/mods/twal";
 import { Tyrax } from "../code/src/tyrux/main";
+import { inquiryTypes } from "./_models/inquiry_type";
+import TModal from "../code/src/mods/modals/tmodal";
 
+const itypes = await inquiryTypes();
 //Js file for landing
 (function() {
     // simple console greeting – no external libraries
@@ -26,7 +28,8 @@ import { Tyrax } from "../code/src/tyrux/main";
         form_id: "emailus",
         form: {
             email: {type: "text", label: "<i class='fas fa-at'></i> Enter your email:"},
-            message: {tag: "textarea", label: "<i class='fas fa-message'></i> Message"}
+            type : {tag: "select", options:itypes, config: {value: "id", label: "type"}, multiple: true },
+            message: {tag: "textarea", label: "<i class='fas fa-message'></i> Message"},
         }
     });
 

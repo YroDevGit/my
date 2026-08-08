@@ -1,10 +1,28 @@
 <?php
+
+use Classes\Ctrx;
 use Classes\Router;
 
+//Public route
 Router::group(
     ["get" => "admin/add"],
     ["get" => "user/add"],
     ["post" => "user/inquire"],
-    ["post" => "user/login"]
+    ["get" => "inquiry_type/get"]
 );
 
+
+//Login route
+Router::group(
+    ["post" => "user/login"]
+)->run(
+    function(){
+        Ctrx::throttle(5, 180);
+    }
+);
+
+
+//Auth route group 1 (g1)
+Router::group(
+    ["delete"=> "inquiries/delete"]
+)->middleware("g1");

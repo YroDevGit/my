@@ -12,8 +12,15 @@ Migration::table_ts("emails", [
     "email" => VARCHAR,
     "fname" => VARCHAR,
     "lname" => VARCHAR,
+    "itype" => INTEGER,
     "message" => ["varchar" => 500],
 ], true);
+
+Migration::table_ts("inquiry_type", [
+    "id" => PK,
+    "type" => VARCHAR,
+    "details" => VARCHAR
+]);
 
 Migration::table_ts("users", [
     "id" => PK,
@@ -29,5 +36,6 @@ Migration::table_ts("roles", [
     "role_code" => VARCHAR,
     "role_title" => VARCHAR,
     "role_desc" => VARCHAR,
-    "redirect" => VARCHAR
+    "redirect" => VARCHAR,
+    "group" => INTEGER
 ]);

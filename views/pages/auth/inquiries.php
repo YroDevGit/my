@@ -2,9 +2,9 @@
 
 use Tables\Emails;
 
-$page =  get("page") ?? 1;
+$page =  get("page") ?: 1;
 
-$result = Emails::paginatedFind(["active" => 1], $page);
+$result = Emails::paginatedFind(["active" => 1], $page, extra:["order by"=>"created_at desc"]);
 $data = $result['data'];
 $pagination = $result['pagination'];
 $hasNext = $pagination['has_next'];
@@ -120,8 +120,8 @@ $hasNext = $pagination['has_next'];
                         </thead>
                         <tbody id="inquiryBody">
                             <!-- inquiry 1 -->
-                            <?php foreach ($data as $k=>$row): ?>
-                                <tr data-id="<?=encrypt($row['id'])?>">
+                            <?php foreach ($data as $k => $row): ?>
+                                <tr data-id="<?= encrypt($row['id']) ?>">
                                     <td class="px-4 py-3">
                                         <input class="form-check-input inquiry-checkbox" type="checkbox" data-id="1">
                                     </td>
@@ -131,7 +131,7 @@ $hasNext = $pagination['has_next'];
                                                 U
                                             </div>
                                             <div>
-                                                <div class="fw-semibold small"><?=$row['email']?></div>
+                                                <div class="fw-semibold small"><?= $row['email'] ?></div>
                                             </div>
                                         </div>
                                     </td>
@@ -141,8 +141,8 @@ $hasNext = $pagination['has_next'];
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div class="text-truncate" style="max-width: 200px;" msg ="<?=$row['message'] ?? ""?>">
-                                            <?=$row['message'] ?? ""?>
+                                        <div class="text-truncate msgpop" style="max-width: 200px;" msg="<?= $row['message'] ?? "" ?>">
+                                            <?= $row['message'] ?? "" ?>
                                         </div>
                                     </td>
                                     <td class="px-3 py-3">
@@ -163,7 +163,7 @@ $hasNext = $pagination['has_next'];
                                                 <li>
                                                     <hr class="dropdown-divider">
                                                 </li>
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteInquiry(1)"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                                                <li><a class="dropdown-item text-danger action-del" data-id="<?= encrypt($row['id']) ?>" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
                                             </ul>
                                         </div>
                                     </td>
@@ -176,15 +176,23 @@ $hasNext = $pagination['has_next'];
                 <!-- table footer with simple pagination -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between px-4 py-3 border-top">
                     <div class="text-secondary small">
-                     <span id="startRange"><span id="totalRecords"><?=$pagination['total_records']?></span> inquiries
+                        <span id="startRange"><span id="totalRecords"><?= $pagination['total_records'] ?></span> inquiries
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-4" id="prevPage" onclick="previousPage()">
-                            <i class="fas fa-chevron-left me-1"></i> Previous
-                        </button>
-                        <button class="btn btn-primary btn-sm rounded-pill px-4" id="nextPage" onclick="nextPage()">
-                            Next <i class="fas fa-chevron-right ms-1"></i>
-                        </button>
+                        <?php if ($page > 1): ?>
+                            <a href="?page=<?= $page - 1 ?>">
+                            <button class="btn btn-outline-secondary btn-sm rounded-pill px-4" id="prevPage">
+                                <i class="fas fa-chevron-left me-1"></i> Previous
+                            </button>
+                            </a>
+                        <? endif; ?>
+                        <?php if ($hasNext): ?>
+                            <a href="?page=<?= $page + 1 ?>">
+                            <button class="btn btn-primary btn-sm rounded-pill px-4" id="nextPage">
+                                Next <i class="fas fa-chevron-right ms-1"></i>
+                            </button>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -197,24 +205,6 @@ $hasNext = $pagination['has_next'];
 
     <?= _bootstrap_js() ?>
     <script>
-        function nextPage() {
-            let current = <?=$page?>;
-            let hasNext = <?=$hasNext?>;
-            
-            if(hasNext){
-                let next = parseInt(current +1);
-                location.href = "?page="+next;
-            }
-        }
-
-        // ===== FUNCTION: PREVIOUS PAGE =====
-        function previousPage() {
-            let current = <?=$page?>;
-            if (current > 1) {
-                let next = parseInt(current -1);
-                location.href = "?page="+next;
-            }
-        }
 
         // ===== FUNCTION: SELECT ALL =====
         function selectAllInquiries() {

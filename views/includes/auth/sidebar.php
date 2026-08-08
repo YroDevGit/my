@@ -45,7 +45,7 @@
              <i class="fas fa-question-circle"></i>
              <span class="nav-text">Help</span>
          </a>
-         <a href="/login" class="nav-link">
+         <a href="/ctrx/logout" class="nav-link">
              <i class="fas fa-sign-out-alt"></i>
              <span class="nav-text">Logout</span>
          </a>
