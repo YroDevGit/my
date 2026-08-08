@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeYro · custom web apps & hosting</title>
+  <title><?=variable('name')?> · custom web apps & hosting</title>
   <?= _bootstrap_css() ?>
   <!-- Font Awesome 6 (free icons) -->
   <?= assets_css('landing') ?>
@@ -18,7 +18,7 @@
   <nav class="navbar navbar-expand-lg navbar-dark brand-gradient py-3">
     <div class="container">
       <a class="navbar-brand fw-bold fs-3" href="#">
-        <i class="fas fa-code me-2"></i>CodeYro
+        <i class="fas fa-code me-2"></i><?=variable('name')?>
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"
         aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
@@ -212,7 +212,7 @@
       <div class="row g-4">
         <div class="col-md-4">
           <div class="bg-white p-4 rounded-4 shadow-sm h-100">
-            <div class="testimonial-quote">“CodeYro built our internal CRM in just 6 weeks. The hosting is rock solid — we’ve had zero downtime.”</div>
+            <div class="testimonial-quote">“<?=variable('name')?> built our internal CRM in just 6 weeks. The hosting is rock solid — we’ve had zero downtime.”</div>
             <div class="mt-3 d-flex align-items-center">
               <div><i class="fas fa-user-circle fs-1 text-secondary opacity-50"></i></div>
               <div class="ms-2"><strong>Sarah K.</strong><br><span class="text-secondary small">Operations Lead, Finlytics</span></div>
@@ -274,8 +274,8 @@
     <div class="container">
       <div class="row g-4">
         <div class="col-md-4">
-          <h4 class="fw-bold"><i class="fas fa-code me-2"></i>CodeYro</h4>
-          <p class="opacity-75 small">Custom web apps · hosting · DevOps. Built for scale, backed by support.</p>
+          <h4 class="fw-bold" style="cursor:pointer;" id="titlebelow"><i class="fas fa-code me-2"></i><?=variable('name')?></h4>
+          <p class="opacity-75 small"><?=t('Custom web apps · hosting · DevOps. Built for scale, backed by support.')?></p>
           <div class="mt-3">
             <a href="#" class="footer-link me-3"><i class="fab fa-github"></i></a>
             <a href="#" class="footer-link me-3"><i class="fab fa-linkedin-in"></i></a>
@@ -309,7 +309,7 @@
       </div>
       <hr class="border-light opacity-25 my-4">
       <div class="text-center small opacity-50">
-        &copy; 2026 CodeYro. Freelance web app studio.
+        &copy; 2026 <?=variable('name')?>. Freelance web app studio.
       </div>
     </div>
   </footer>
