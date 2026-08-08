@@ -18,7 +18,7 @@ Ctr.submit("#loginForm", (data, raw) => {
                 Twal.err(message);
             }
             if(code == 200){
-                Twal.ok("Success", true);
+                Twal.ok("You are now logged in", true);
             }
         }
     });
