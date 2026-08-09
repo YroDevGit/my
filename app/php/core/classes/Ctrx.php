@@ -473,9 +473,6 @@ class Ctrx
         if (! env('database')) {
             return;
         }
-        if ($UserRole == "admin") {
-            return;
-        }
         if ($currPage == "ctrx/logout") {
             return;
         }

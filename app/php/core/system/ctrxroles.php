@@ -597,7 +597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($is_activated) {
     $roles = $roleManager->getRoles();
     $directories = $routeScanner->getDirectories();
-    $selected_directory = isset($_GET['dir']) ? $_GET['dir'] : 'root';
+    $selected_directory = isset($_GET['dir']) ? $_GET['dir'] : 'all';
     $all_routes = $routeScanner->getRoutesByDirectory($selected_directory);
     $selected_role_id = isset($_GET['role_id']) ? (int)$_GET['role_id'] : (isset($roles[0]) ? $roles[0]['id'] : 0);
     $selected_role = $selected_role_id ? $roleManager->getRole($selected_role_id) : null;
