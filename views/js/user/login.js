@@ -1,9 +1,9 @@
 //Js file for user/login
 
-import Ctr from "../code/src/mods/ctr";
-import FormValidator from "../code/src/mods/formValidator";
-import { Twal } from "../code/src/mods/twal";
-import { Tyrax } from "../code/src/tyrux/main";
+import Ctr from "../../code/src/mods/ctr";
+import FormValidator from "../../code/src/mods/formValidator";
+import { Twal } from "../../code/src/mods/twal";
+import { Tyrax } from "../../code/src/tyrux/main";
 
 Ctr.submit("#loginForm", (data, raw) => {
     Tyrax.post({

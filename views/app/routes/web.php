@@ -9,7 +9,7 @@ use Tables\Users;
 Ctrx::role_filtering(); // Default role validation
 
 
-Routing::group_page("/login", function(){
+Routing::group_page("user/login", function(){
     if(Ctrx::has_user_data()){
         $role = Ctrx::get_user_role();
         $findRedirect = Roles::findOne(["role_code"=>$role]);

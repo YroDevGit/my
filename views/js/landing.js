@@ -34,7 +34,7 @@ const itypes = await inquiryTypes();
     });
 
     Ctrx.click("#titlebelow", ()=>{
-      Ctrx.redirect("/login");
+      Ctrx.redirect("user/login");
     });
 
     Ctrx.click(".email-modal", ()=>{

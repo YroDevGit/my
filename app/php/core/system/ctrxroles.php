@@ -1642,7 +1642,7 @@ if ($is_activated) {
                                 <?php else: ?>
                                     <?php foreach ($all_routes as $route): ?>
                                         <?php $has_access = isset($role_access[$route['route']]) ? $role_access[$route['route']] : 0;
-                                        if (isset($route['route']) && (! str_contains($route['route'], "/") && ! isset($role_access[$route['route']]))) {
+                                        if (isset($route['route']) && ! isset($role_access[$route['route']])) {
                                             $routeN = $route['route'];
                                             $roleId = $_GET['role_id'] ?? 1;
                                             $stm = $pdo->prepare("INSERT INTO ctrx_roles_access (role_id, route, has_access) VALUES('$roleId', '$routeN', 1)");

@@ -44,7 +44,7 @@ use Classes\Ctrx;
          </a>
 
          <div class="nav-section-title mt-3">Support</div>
-         <?php if (Ctrx::get_user_role() == "admin"): ?>
+         <?php if (Ctrx::get_user_role() == "SA"): ?>
              <a href="/ctrxtools" class="nav-link">
                  <i class="fas fa-question-circle"></i>
                  <span class="nav-text">Help</span>
