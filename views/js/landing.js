@@ -28,7 +28,7 @@ const itypes = await inquiryTypes();
         form_id: "emailus",
         form: {
             email: {type: "text", label: "<i class='fas fa-at'></i> Enter your email:"},
-            type : {tag: "select", label: "<i class='fas fa-code'></i> Type:", options:itypes, config: {value: "id", label: "type"}},
+            type : {tag: "select", label: "<i class='fas fa-code'></i> Type:", options:itypes, config: {value: "id", label: "type"}, index: "SELECT INQUIRY TYPE"},
             message: {tag: "textarea", label: "<i class='fas fa-message'></i> Message"},
         }
     });

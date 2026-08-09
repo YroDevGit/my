@@ -19,7 +19,8 @@ Migration::table_ts("emails", [
 Migration::table_ts("inquiry_type", [
     "id" => PK,
     "type" => VARCHAR,
-    "details" => VARCHAR
+    "details" => VARCHAR,
+    "color" => VARCHAR,
 ]);
 
 Migration::table_ts("users", [

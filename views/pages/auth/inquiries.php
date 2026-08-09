@@ -1,6 +1,10 @@
 <?php
 
+use Classes\Ctrx;
+use Models\InquieryTypeModel;
 use Tables\Emails;
+
+Ctrx::page_rate_limit(7);
 
 $page =  get("page") ?: 1;
 
@@ -136,8 +140,9 @@ $hasNext = $pagination['has_next'];
                                         </div>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 fw-normal">
-                                            Web Application
+                                        <?php $iqtype = InquieryTypeModel::getById($row['itype']);  ?>
+                                        <span class="badge bg-<?=$iqtype['color'] ?? 'primary'?> bg-opacity-10 text-<?=$iqtype['color'] ?? 'primary'?> rounded-pill px-3 py-2 fw-normal">
+                                            <?=$iqtype['type'] ?? null?>
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
