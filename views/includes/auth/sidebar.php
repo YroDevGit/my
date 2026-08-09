@@ -1,3 +1,6 @@
+<?php
+use Classes\Ctrx;
+?>
  <!-- ===== SIDEBAR ===== -->
  <nav class="sidebar" id="sidebar">
      <!-- brand -->
@@ -41,10 +44,12 @@
          </a>
 
          <div class="nav-section-title mt-3">Support</div>
-         <a href="#" class="nav-link">
-             <i class="fas fa-question-circle"></i>
-             <span class="nav-text">Help</span>
-         </a>
+         <?php if (Ctrx::get_user_role() == "SA"): ?>
+             <a href="/ctrxtools" class="nav-link">
+                 <i class="fas fa-question-circle"></i>
+                 <span class="nav-text">Help</span>
+             </a>
+         <?php endif; ?>
          <a href="/ctrx/logout" class="nav-link">
              <i class="fas fa-sign-out-alt"></i>
              <span class="nav-text">Logout</span>

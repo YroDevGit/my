@@ -64,7 +64,7 @@ $hasNext = $pagination['has_next'];
                         <div class="d-flex align-items-center gap-3">
                             <div class="stat-icon blue"><i class="fas fa-envelope"></i></div>
                             <div>
-                                <div class="stat-value" id="totalCount">24</div>
+                                <div class="stat-value" id="totalCount"><?=$pagination['total_records']?></div>
                                 <div class="stat-label">Total Inquiries</div>
                             </div>
                         </div>
