@@ -2,7 +2,7 @@
 
 use Classes\Ctrx;
 
-Ctrx::page_rate_limit(3);
+Ctrx::page_rate_limit(5);
 ?>
 <!DOCTYPE html>
 <html lang="en">

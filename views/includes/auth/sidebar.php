@@ -50,9 +50,11 @@ use Classes\Ctrx;
                  <span class="nav-text">Help</span>
              </a>
          <?php endif; ?>
-         <a href="/ctrx/logout" class="nav-link">
+         <a href="#" class="nav-link logout-btn">
              <i class="fas fa-sign-out-alt"></i>
              <span class="nav-text">Logout</span>
          </a>
      </div>
  </nav>
+
+ <?=js("_auth/sidebar")?>
