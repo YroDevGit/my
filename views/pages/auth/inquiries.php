@@ -4,8 +4,6 @@ use Classes\Ctrx;
 use Models\InquieryTypeModel;
 use Tables\Emails;
 
-Ctrx::page_rate_limit(7);
-
 $page =  get("page") ?: 1;
 
 $result = Emails::paginatedFind(["active" => 1], $page, extra:["order by"=>"created_at desc"]);

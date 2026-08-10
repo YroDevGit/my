@@ -1,3 +1,9 @@
+<?php
+
+use Classes\Ctrx;
+
+Ctrx::page_rate_limit(3);
+?>
 <!DOCTYPE html>
 <html lang="en">
 
