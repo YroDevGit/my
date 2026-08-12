@@ -1,8 +1,10 @@
-{  
+let env = {  
     "appname": "codetazer",
     "author": "tyronemalocon",
-    "secret": "tyronelmcodeyro_personal",
-    "key": "tyronelmcodeyro_personal",
+    "secret": "codetazeryro",
+    "key": "codetazerapp",
     "fe": "frontend",
     "be": "backend"
-}
+};
+
+export default env;

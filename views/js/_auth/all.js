@@ -1,10 +1,13 @@
 import Ctr from "../../code/src/mods/ctr";
+import Secure from "../../code/src/mods/secure";
 
+console.log(Secure.encrypt("aw"));
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const mainWrapper = document.getElementById('mainWrapper');
 
+    
     // Check if mobile
     const isMobile = window.innerWidth <= 992;
 
