@@ -22,8 +22,6 @@ Routing::group_page("user/login", function(){
 
 Routing::group_page("auth/*", function(){
     js("_auth/all");
-    js();
-
     if(! Ctrx::has_user_data()){
         redirect_logout();
     }

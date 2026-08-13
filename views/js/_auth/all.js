@@ -1,7 +1,6 @@
 import Ctr from "../../code/src/mods/ctr";
 import Secure from "../../code/src/mods/secure";
 
-console.log(Secure.encrypt("aw"));
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -23,6 +22,14 @@ function toggleSidebar() {
         mainWrapper.classList.toggle('expanded');
     }
 }
+
+document.querySelector('.nav-avatar')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = this.nextElementSibling;
+    if (dropdown) {
+      dropdown.classList.toggle('show');
+    }
+  });
 
 Ctr.click(".toogleSideBar", ()=>{
     toggleSidebar();
