@@ -322,7 +322,6 @@ Ctrx::page_rate_limit(5);
 
   <!-- Bootstrap JS (for toggling, etc.) -->
   <?= _bootstrap_js() ?>
-  <?= js() ?>
 </body>
 
 </html>
