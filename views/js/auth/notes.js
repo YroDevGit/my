@@ -12,7 +12,7 @@ let addNoteModal = TModal.init({
     form_id: "addNoteForm",
     title: "Add note",
     form: {
-        category: {tag: "select", options: resCategories, config:{value: "id", label: "name"}},
+        category: {tag: "select", options: resCategories, config:{value: "id", label: "name"},index: "Select Category"},
         title: {type: "text", label: "Title"},
         desc: {tag: "textarea", label: "Description"},
         date: {tag: "calendar", label: "Date"}
