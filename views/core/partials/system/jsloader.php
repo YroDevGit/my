@@ -12,7 +12,7 @@ if (! function_exists("private_loadAllJsFiles")) {
             ?>
             <div id="ctrx-loading-overlay-blourer" style="position:fixed;top:0;left:0;width:100%;height:100%;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(255,255,255,0.05);z-index:9999;display:flex;justify-content:center;align-items:center;transition:opacity 0.8s ease-out;">
             </div>
-            <style id="ctrx-loader-style">
+            <style id="ctrx-loader-style-blourer">
                 @keyframes ctrx-spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
@@ -55,7 +55,7 @@ if (! function_exists("private_loadAllJsFiles")) {
                         overlay.classList.add("hidden");
                         setTimeout(() => {
                             overlay.remove();
-                            document.querySelector("#ctrx-loader-style")?.remove();
+                            document.querySelector("#ctrx-loader-style-blourer")?.remove();
                         }, 800);
                     }
                     
