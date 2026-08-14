@@ -12,7 +12,7 @@ use Classes\Ctrx;
      <!-- navigation -->
      <div class="mt-2">
          <div class="nav-section-title">Main</div>
-         <a href="#" class="nav-link active">
+         <a href="#" class="nav-link <?=active_class('auth/dashboard')?>">
              <i class="fas fa-th-large"></i>
              <span class="nav-text">Dashboard</span>
          </a>
@@ -23,6 +23,14 @@ use Classes\Ctrx;
          <a href="#" class="nav-link">
              <i class="fas fa-users"></i>
              <span class="nav-text">Clients</span>
+         </a>
+         <a href="/auth/inquiries" class="nav-link <?=active_class('auth/inquiries')?>">
+             <i class="fas fa-users"></i>
+             <span class="nav-text">Inquiries</span>
+         </a>
+         <a href="/auth/notes" class="nav-link <?=active_class('auth/notes')?>">
+             <i class="fa fa-sticky-note"></i>
+             <span class="nav-text">Notes</span>
          </a>
          <a href="#" class="nav-link">
              <i class="fas fa-tasks"></i>

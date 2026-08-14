@@ -40,3 +40,19 @@ Migration::table_ts("roles", [
     "redirect" => VARCHAR,
     "group" => INTEGER
 ]);
+
+Migration::table_ts("notes", [
+    "id" => PK,
+    "user_id" => INTEGER,
+    "category" => INTEGER,
+    "title" => VARCHAR,
+    "description" => ["varchar" => 1000],
+    "date" => DATE,
+], true);
+
+Migration::table_ts("note_category", [
+    "id" => PK,
+    "name" => VARCHAR,
+    "description"=> ["varchar" => "250"],
+    "theme" => VARCHAR
+], true);

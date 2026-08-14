@@ -24,5 +24,8 @@ Router::group(
 
 //Auth route group 1 (g1)
 Router::group(
-    ["delete"=> "inquiries/delete"]
+    ["delete"=> "inquiries/delete"],
+    ["post" => "note/add"],
+    ["get" => "note/get"],
+    
 )->middleware("g1");

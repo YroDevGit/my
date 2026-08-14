@@ -32,7 +32,7 @@
           <p class="text-secondary small mb-0">Manage your tasks, notes, and upcoming events</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-primary rounded-pill px-4" onclick="addNote()">
+          <button class="btn btn-primary rounded-pill px-4" id="addnote">
             <i class="fas fa-plus me-2"></i>Add Note
           </button>
           <button class="btn btn-outline-primary rounded-pill px-4" onclick="addEvent()">

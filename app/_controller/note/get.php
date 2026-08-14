@@ -1,0 +1,18 @@
+<?php //route: note/get
+
+//Add codes here...
+
+use Classes\Response;
+use Tables\Note_category;
+
+$id = get("id");
+
+$data = [];
+
+if($id){
+    $data = Note_category::get(["id"=>$id]);
+}else{
+    $data = Note_category::getAll();
+}
+
+Response::code(200)->data($data)->exec();

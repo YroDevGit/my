@@ -23,3 +23,5 @@ $findRole = Roles::findOne(['role_code'=>$role, "group"=>1]);
 if(! $findRole){
     Response::code(unauthorized_code)->message("Unauthorized access")->send(unauthorized_code);
 }
+
+define("myID", Ctrx::get_user_data("id"));
