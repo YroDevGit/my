@@ -27,5 +27,6 @@ Router::group(
     ["delete"=> "inquiries/delete"],
     ["post" => "note/add"],
     ["get" => "note/get"],
+    ["delete" => "note/delete"]
     
 )->middleware("g1");

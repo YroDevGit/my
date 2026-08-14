@@ -41,6 +41,28 @@ Ctr.click("#addnote", ()=>{
     addNoteModal.show();
 });
 
+Ctr.click(".deletebtn", (btn, attr)=>{
+    let id = attr['data-id'];
+    Twal.ask("Are you sure to delete this note?").then((click)=>{
+        if(click.confirm){
+            Tyrax.delete({
+                url: "note/delete",
+                data: {id: id},
+                res: (send, code, message, data, error)=>{
+                    if(code == 422){
+                        Twal.err(message);
+                        return;
+                    }
+                    if(code == 200){
+                        Twal.ok("Success", true);
+                        return;
+                    }
+                }
+            })
+        }
+    });
+});
+
 Ctr.click("#searchbtn", ()=>{
     let value = Ctr.value("#searchNotes");
     let category = Ctr.value("#filterNotesCategory");

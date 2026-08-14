@@ -23,6 +23,7 @@ services:
     container_name: ctrx_db_personal
     restart: unless-stopped
     environment:
+      TZ: Asia/Manila
       MARIADB_ROOT_PASSWORD: password
     ports:
       - "3309:3306"

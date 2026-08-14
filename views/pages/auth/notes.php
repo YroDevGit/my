@@ -1,6 +1,8 @@
 <?php
 
 use Classes\Collection;
+use Classes\Date;
+use Models\NoteCategoryModel;
 use Tables\Note_category;
 use Tables\Notes;
 
@@ -24,9 +26,12 @@ if ($search) {
   ];
 }
 
-$allNotesResult = Notes::paginatedFind($searchData);
+$page = get("page") ?? 1;
 
-$allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
+$allNotesResult = Notes::paginatedFind($searchData, $page);
+
+$allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
+
 ?>
 
 <!DOCTYPE html>
@@ -154,7 +159,7 @@ $allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
             <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;" id="filterNotesCategory">
               <option value="">All Notes</option>
               <?php foreach ($notes as $k => $v): ?>
-                <option <?=decrypt($category) == decrypt($v['id'] )? 'selected' : '';?> value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
+                <option <?= compare_decrypt($category, $v['id']) ? 'selected' : '';?> value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
               <?php endforeach; ?>
             </select>
             <button class="btn btn-primary fa fa-search" id="searchbtn"></button>
@@ -164,12 +169,13 @@ $allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
           <div class="row g-3" id="notesGrid">
 
 
-            <?php foreach ($allNotes['data'] as $k => $v): ?>
+            <?php foreach ($allNotes as $k => $v): ?>
+              <?php $selectedNote = NoteCategoryModel::getNoteCategoryById($v['category']); ?>
               <div class="col-md-6 col-lg-4">
                 <div class="card border-0 shadow-sm h-100 note-card" data-category="work">
                   <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                      <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1">Work</span>
+                      <span class="badge bg-<?=$selectedNote['theme']?> bg-opacity-10 text-<?=$selectedNote['theme']?> rounded-pill px-3 py-1"><?=val($selectedNote['name'])?></span>
                       <div class="dropdown">
                         <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-v"></i>
@@ -180,14 +186,14 @@ $allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
                           <li>
                             <hr class="dropdown-divider">
                           </li>
-                          <li><a class="dropdown-item text-danger" href="#" onclick="deleteNote(1)"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                          <li><a class="dropdown-item text-danger deletebtn" data-id="<?=$v['id']?>" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
                         </ul>
                       </div>
                     </div>
                     <h6 class="fw-bold mb-2"><?=val($v['title'])?></h6>
-                    <p class="text-secondary small mb-3">Discussed new CRM features with Finlytics team. Need to prepare proposal by Friday.</p>
+                    <p class="text-secondary small mb-3"><?=val($v['description'])?></p>
                     <div class="d-flex justify-content-between align-items-center">
-                      <span class="text-secondary small"><i class="far fa-clock me-1"></i>2 hours ago</span>
+                      <span class="text-secondary small"><i class="far fa-clock me-1"></i><?=Date::timeDif($v['created_at'])?></span>
                       <span class="text-secondary small"><i class="far fa-tag me-1"></i>#crm #proposal</span>
                     </div>
                   </div>
