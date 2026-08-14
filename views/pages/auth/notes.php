@@ -14,7 +14,7 @@ $search = get("search") ?? null;
 $searchData = [];
 
 if ($category) {
-  $searchData['or']['category'] = $category;
+  $searchData['category'] = decrypt($category);
 }
 
 if ($search) {
@@ -27,7 +27,6 @@ if ($search) {
 $allNotesResult = Notes::paginatedFind($searchData);
 
 $allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
-
 ?>
 
 <!DOCTYPE html>
@@ -149,15 +148,16 @@ $allNotes = Collection::data($allNotesResult)->encrypt("id")->exec();
                   <i class="fas fa-search text-secondary"></i>
                 </span>
                 <input type="text" class="form-control bg-light border-start-0 rounded-end-pill"
-                  placeholder="Search notes..." time="true" id="searchNotes">
+                  placeholder="Search notes..." value="<?=$search?>" time="true" id="searchNotes">
               </div>
             </div>
-            <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;" id="filterNotes" onchange="filterNotes()">
+            <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;" id="filterNotesCategory">
               <option value="">All Notes</option>
               <?php foreach ($notes as $k => $v): ?>
-                <option value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
+                <option <?=decrypt($category) == decrypt($v['id'] )? 'selected' : '';?> value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
               <?php endforeach; ?>
             </select>
+            <button class="btn btn-primary fa fa-search" id="searchbtn"></button>
           </div>
 
           <!-- notes grid -->

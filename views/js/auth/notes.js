@@ -40,3 +40,9 @@ addNoteModal.form_submit((data, raw)=>{
 Ctr.click("#addnote", ()=>{
     addNoteModal.show();
 });
+
+Ctr.click("#searchbtn", ()=>{
+    let value = Ctr.value("#searchNotes");
+    let category = Ctr.value("#filterNotesCategory");
+    location.href = `?category=${category}&search=${value}`;
+});
