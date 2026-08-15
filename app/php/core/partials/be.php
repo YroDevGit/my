@@ -692,3 +692,9 @@ if(! function_exists("myId")){
         return get_user_data($column) ?? null;
     }
 }
+
+if(! function_exists("date_locale")){
+    function date_locale($date, $timezone = null){
+        return \Classes\Date::local($date, $timezone);
+    }
+}
