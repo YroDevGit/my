@@ -10,7 +10,7 @@
     <div class="d-flex align-items-center gap-2 gap-sm-3">
         <!-- search -->
         <div class="d-none d-md-block">
-            <input type="text" class="navbar-search" placeholder="Search...">
+            
         </div>
 
         <!-- notifications -->
@@ -23,7 +23,7 @@
 
         <!-- avatar -->
         <div class="nav-avatar" data-bs-toggle="dropdown" aria-expanded="false">
-            JD
+            <i class="fa fa-user"></i>
         </div>
         <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
@@ -31,7 +31,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            <li><a class="dropdown-item text-danger" href="/login"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+            <li><a class="dropdown-item text-danger logout-btn" href="#"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
         </ul>
     </div>
 </nav>
