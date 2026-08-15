@@ -212,7 +212,7 @@ $devs = Devteam::getAll();
   </section>
 
   <!-- ========== TESTIMONIALS ========== -->
-  <section id="testimonials" class="py-5">
+  <section id="testimonials" class="py-5" style="display: none;">
     <div class="container py-3">
       <div class="text-center mb-5">
         <span class="pill-badge bg-soft-blue text-primary mb-2 d-inline-block"><i class="fas fa-quote-left me-1"></i> client stories</span>
@@ -345,7 +345,7 @@ $devs = Devteam::getAll();
         <div class="col-md-4">
           <h6 class="fw-semibold">Let’s connect</h6>
           <p class="small opacity-75 email-modal"><i class="fas fa-envelope me-2"></i><?= variable('email') ?></p>
-          <p class="small opacity-75"><i class="fas fa-phone me-2"></i><?= variable('phone') ?></p>
+          <p class="small opacity-75"><i class="fas fa-phone me-2"></i><a href="tel:<?= variable('phone') ?>"><?= variable('phone') ?></a></p>
           <p class="small opacity-75"><i class="fas fa-map-pin me-2"></i>Remote · available worldwide</p>
         </div>
       </div>
