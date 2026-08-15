@@ -1,8 +1,11 @@
 <?php
 
 use Classes\Ctrx;
+use Tables\Devteam;
 
 Ctrx::page_rate_limit(5);
+
+$devs = Devteam::getAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -242,6 +245,41 @@ Ctrx::page_rate_limit(5);
               <div class="ms-2"><strong>Elena V.</strong><br><span class="text-secondary small">CEO, PropView</span></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== TEAM CAROUSEL ========== -->
+  <section id="team" class="py-5 bg-soft-blue">
+    <div class="container py-3">
+      <div class="text-center mb-5">
+        <span class="pill-badge bg-white text-primary mb-2 d-inline-block"><i class="fas fa-users me-1"></i> meet the team</span>
+        <h2 class="section-title display-5">The <span style="color: #1b3a6b;">experts</span> behind your success</h2>
+        <p class="section-sub lead mx-auto" style="max-width: 640px;">Passionate developers, designers, and strategists ready to bring your vision to life.</p>
+      </div>
+
+
+      <div class="team-scroll-wrapper position-relative overflow-hidden">
+        <div class="team-scroll-track d-flex <?=count($devs) < 5 ? "justify-content-center" : ''?>" id="teamScrollTrack">
+
+          <!-- member 1 -->
+          <?php foreach($devs as $k=>$v): ?>
+            <div class="team-member flex-shrink-0 text-center px-3" style="width: 25%;">
+            <div class="px-2">
+              <img src="<?=val($v['img'])?>"
+                alt="John Doe"
+                class="rounded-circle mx-auto mb-3"
+                style="width: 100px; height: 100px; object-fit: cover;">
+              <h5 class="fw-bold mb-0"><?=val($v['name'])?></h5>
+              <span class="text-secondary small"><?= val($v['role']) ?></span>
+              <div class="d-flex justify-content-center gap-3 mt-2">
+                <a href="<?=val($v['url'])?>" target="_blank" class="text-secondary"><i class="fab fa-facebook"></i></a>
+              </div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+
         </div>
       </div>
     </div>

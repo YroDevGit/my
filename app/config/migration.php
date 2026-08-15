@@ -56,3 +56,12 @@ Migration::table_ts("note_category", [
     "description"=> ["varchar" => "250"],
     "theme" => VARCHAR
 ], true);
+
+Migration::table_ts("devteam", [
+    "id" => PK,
+    "name" => VARCHAR,
+    "url" => ["varchar" => 300],
+    "img" => TEXT,
+    "role" => VARCHAR,
+    "goto" => ["varchar"=> 200] 
+], true);

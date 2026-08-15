@@ -11,9 +11,9 @@ $id = get("id");
 $data = [];
 
 if($id){
-    $data = Note_category::get(["id"=>$id]);
+    $data = Note_category::get(["id"=>$id, "user_id"=>myID]);
 }else{
-    $data = Note_category::getAll();
+    $data = Note_category::find(["user_id"=>myID]);
 }
 
 $data = Collection::data($data)->encrypt("id")->exec();

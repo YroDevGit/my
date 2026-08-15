@@ -22,14 +22,19 @@ if ($category) {
 if ($search) {
   $searchData['or']['like'] = [
     "title" => $search,
-    "description" => $search
+    "description" => $search,
+    "date" => $search
   ];
 }
 
 $page = get("page") ?? 1;
 
-$allNotesResult = Notes::paginatedFind($searchData, $page);
+$allNotesResult = Notes::paginatedFind($searchData, $page, 9, ["order by"=>"created_at desc"]);
 
+$NotesPagination = $allNotesResult['pagination'];
+$hasNext = $NotesPagination['has_next'] ?? false;
+$hasPrev = $NotesPagination['has_previous'] ?? false;
+$totalPages = $NotesPagination['total_pages'] ?? 0;
 $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
 
 ?>
@@ -68,60 +73,12 @@ $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
           <p class="text-secondary small mb-0">Manage your tasks, notes, and upcoming events</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-primary rounded-pill px-4" id="addnote">
+          <button class="btn btn-primary rounded-pill px-4 addnote">
             <i class="fas fa-plus me-2"></i>Add Note
           </button>
-          <button class="btn btn-outline-primary rounded-pill px-4" onclick="addEvent()">
-            <i class="fas fa-calendar-plus me-2"></i>Add Event
+          <button class="btn btn-outline-primary rounded-pill px-4 refreshbtn">
+            <i class="fas fa-refresh me-2"></i>Refresh
           </button>
-        </div>
-      </div>
-
-      <!-- stats row -->
-      <div class="row g-3 g-md-4 mb-4">
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center gap-3">
-              <div class="stat-icon blue"><i class="fas fa-sticky-note"></i></div>
-              <div>
-                <div class="stat-value" id="totalNotes">18</div>
-                <div class="stat-label">Total Notes</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center gap-3">
-              <div class="stat-icon orange"><i class="fas fa-calendar-day"></i></div>
-              <div>
-                <div class="stat-value" id="todayEvents">3</div>
-                <div class="stat-label">Today's Events</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center gap-3">
-              <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-              <div>
-                <div class="stat-value" id="completedTasks">7</div>
-                <div class="stat-label">Completed</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center gap-3">
-              <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
-              <div>
-                <div class="stat-value" id="pendingTasks">11</div>
-                <div class="stat-label">Pending</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -153,21 +110,24 @@ $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
                   <i class="fas fa-search text-secondary"></i>
                 </span>
                 <input type="text" class="form-control bg-light border-start-0 rounded-end-pill"
-                  placeholder="Search notes..." value="<?=$search?>" time="true" id="searchNotes">
+                  placeholder="Search notes..." value="<?= $search ?>" time="true" id="searchNotes">
               </div>
             </div>
             <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;" id="filterNotesCategory">
               <option value="">All Notes</option>
               <?php foreach ($notes as $k => $v): ?>
-                <option <?= compare_decrypt($category, $v['id']) ? 'selected' : '';?> value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
+                <option <?= compare_decrypt($category, $v['id']) ? 'selected' : ''; ?> value="<?= $v['id'] ?>"><?= $v['name'] ?></option>
               <?php endforeach; ?>
             </select>
             <button class="btn btn-primary fa fa-search" id="searchbtn"></button>
           </div>
 
           <!-- notes grid -->
-          <div class="row g-3" id="notesGrid">
+          <div class="row g-3" id="notesGrid" style="padding-bottom: 20px;">
 
+            <?php if(! $allNotes): ?>
+              <div align='center' style="padding: 10px 0px;">No notes found. <span class="addnote text-primary" style="cursor:pointer;">Add note</span></div>
+            <?php endif; ?>
 
             <?php foreach ($allNotes as $k => $v): ?>
               <?php $selectedNote = NoteCategoryModel::getNoteCategoryById($v['category']); ?>
@@ -175,7 +135,7 @@ $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
                 <div class="card border-0 shadow-sm h-100 note-card" data-category="work">
                   <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                      <span class="badge bg-<?=$selectedNote['theme']?> bg-opacity-10 text-<?=$selectedNote['theme']?> rounded-pill px-3 py-1"><?=val($selectedNote['name'])?></span>
+                      <span class="badge bg-<?= $selectedNote['theme'] ?> bg-opacity-10 text-<?= $selectedNote['theme'] ?> rounded-pill px-3 py-1"><?= val($selectedNote['name']) ?></span>
                       <div class="dropdown">
                         <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
                           <i class="fas fa-ellipsis-v"></i>
@@ -186,15 +146,15 @@ $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
                           <li>
                             <hr class="dropdown-divider">
                           </li>
-                          <li><a class="dropdown-item text-danger deletebtn" data-id="<?=$v['id']?>" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                          <li><a class="dropdown-item text-danger deletebtn" data-id="<?= $v['id'] ?>"><i class="fas fa-trash me-2"></i>Delete</a></li>
                         </ul>
                       </div>
                     </div>
-                    <h6 class="fw-bold mb-2"><?=val($v['title'])?></h6>
-                    <p class="text-secondary small mb-3"><?=val($v['description'])?></p>
+                    <h6 class="fw-bold mb-2"><?= val($v['title']) ?></h6>
+                    <p class="text-secondary small mb-3"><?= val($v['description']) ?></p>
                     <div class="d-flex justify-content-between align-items-center">
-                      <span class="text-secondary small"><i class="far fa-clock me-1"></i><?=Date::timeDif($v['created_at'])?></span>
-                      <span class="text-secondary small"><i class="far fa-tag me-1"></i>#crm #proposal</span>
+                      <span class="text-secondary small"><i class="far fa-clock me-1"></i><?= Date::timeDif($v['created_at']) ?></span>
+                      <span class="text-secondary small"><i class="far fa-calendar me-1"></i><?=Date::get_name($v['date'], "M d, Y")?></span>
                     </div>
                   </div>
                 </div>
@@ -205,210 +165,28 @@ $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->exec();
             <!-- notes pagination -->
             <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2">
               <div class="text-secondary small">
-                Showing <span id="notesStart">1</span>-<span id="notesEnd">6</span> of <span id="notesTotal">6</span> notes
+                Showing <span id="notesStart"><?=$page?></span> of <span id="notesTotal"><?=$totalPages?></span> pages
               </div>
-              <button class="btn btn-primary btn-sm rounded-pill px-4" id="notesNext" onclick="nextNotes()">
-                Next <i class="fas fa-chevron-right ms-1"></i>
-              </button>
-            </div>
-
-          </div>
-
-          <!-- ===== SCHEDULE TAB ===== -->
-          <div class="tab-pane fade" id="schedule" role="tabpanel">
-
-            <!-- schedule header -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
               <div>
-                <h6 class="fw-bold mb-0">Upcoming Events</h6>
-                <small class="text-secondary">Manage your schedule and deadlines</small>
+                <?php if ($hasPrev): $newPage = $page-1; ?>
+                  <a href="<?=append_url_params(["page"=>$newPage])?>">
+                  <button class="btn btn-primary btn-sm rounded-pill px-4" id="notesNext">
+                    <i class="fas fa-chevron-left ms-1"></i> Previous
+                  </button>
+                  </a>
+                <?php endif; ?>
+                <?php if ($hasNext): $newPage = $page+1; ?>
+                  <a href="<?=append_url_params(["page"=>$newPage])?>">
+                  <button class="btn btn-primary btn-sm rounded-pill px-4" id="notesNext">
+                    Next <i class="fas fa-chevron-right ms-1"></i>
+                  </button>
+                  </a>
+                <?php endif; ?>
               </div>
-              <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="viewCalendar()">
-                  <i class="fas fa-calendar-alt me-1"></i>Calendar View
-                </button>
-                <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="addEvent()">
-                  <i class="fas fa-plus me-1"></i>Add Event
-                </button>
-              </div>
-            </div>
-
-            <!-- schedule list -->
-            <div class="schedule-list">
-
-              <!-- event 1 - today -->
-              <div class="bg-white rounded-4 p-3 p-md-4 border border-light mb-3">
-                <div class="d-flex flex-wrap align-items-start gap-3">
-                  <div class="text-center" style="min-width: 60px;">
-                    <div class="fw-bold text-primary">10:00</div>
-                    <div class="text-secondary small">AM</div>
-                  </div>
-                  <div class="flex-grow-1">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h6 class="fw-bold mb-0">Client Meeting - Finlytics</h6>
-                      <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1">Urgent</span>
-                    </div>
-                    <p class="text-secondary small mb-0">Discuss project scope and timeline for the CRM dashboard.</p>
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                      <span class="text-secondary small"><i class="fas fa-video me-1"></i>Google Meet</span>
-                      <span class="text-secondary small"><i class="fas fa-clock me-1"></i>2 hours</span>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="editEvent(1)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-success btn-sm rounded-pill" onclick="completeEvent(1)">
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteEvent(1)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- event 2 - today -->
-              <div class="bg-white rounded-4 p-3 p-md-4 border border-light mb-3">
-                <div class="d-flex flex-wrap align-items-start gap-3">
-                  <div class="text-center" style="min-width: 60px;">
-                    <div class="fw-bold text-primary">2:30</div>
-                    <div class="text-secondary small">PM</div>
-                  </div>
-                  <div class="flex-grow-1">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h6 class="fw-bold mb-0">Code Review Session</h6>
-                      <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1">In Progress</span>
-                    </div>
-                    <p class="text-secondary small mb-0">Review PRs for the API integration project.</p>
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                      <span class="text-secondary small"><i class="fab fa-github me-1"></i>GitHub</span>
-                      <span class="text-secondary small"><i class="fas fa-clock me-1"></i>1.5 hours</span>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="editEvent(2)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-success btn-sm rounded-pill" onclick="completeEvent(2)">
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteEvent(2)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- event 3 - tomorrow -->
-              <div class="bg-white rounded-4 p-3 p-md-4 border border-light mb-3">
-                <div class="d-flex flex-wrap align-items-start gap-3">
-                  <div class="text-center" style="min-width: 60px;">
-                    <div class="fw-bold text-primary">9:00</div>
-                    <div class="text-secondary small">AM</div>
-                  </div>
-                  <div class="flex-grow-1">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h6 class="fw-bold mb-0">New Client Onboarding</h6>
-                      <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-1">Tomorrow</span>
-                    </div>
-                    <p class="text-secondary small mb-0">Onboard GreenSpace Co. - walk through their requirements.</p>
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                      <span class="text-secondary small"><i class="fas fa-users me-1"></i>Team meeting</span>
-                      <span class="text-secondary small"><i class="fas fa-clock me-1"></i>3 hours</span>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="editEvent(3)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-success btn-sm rounded-pill" onclick="completeEvent(3)">
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteEvent(3)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- event 4 - next week -->
-              <div class="bg-white rounded-4 p-3 p-md-4 border border-light mb-3">
-                <div class="d-flex flex-wrap align-items-start gap-3">
-                  <div class="text-center" style="min-width: 60px;">
-                    <div class="fw-bold text-primary">11:30</div>
-                    <div class="text-secondary small">AM</div>
-                  </div>
-                  <div class="flex-grow-1">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h6 class="fw-bold mb-0">Hosting Migration</h6>
-                      <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-1">Next Week</span>
-                    </div>
-                    <p class="text-secondary small mb-0">Migrate Finlytics app to new AWS infrastructure.</p>
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                      <span class="text-secondary small"><i class="fas fa-server me-1"></i>AWS</span>
-                      <span class="text-secondary small"><i class="fas fa-clock me-1"></i>4 hours</span>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="editEvent(4)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-success btn-sm rounded-pill" onclick="completeEvent(4)">
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteEvent(4)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- event 5 - next week -->
-              <div class="bg-white rounded-4 p-3 p-md-4 border border-light">
-                <div class="d-flex flex-wrap align-items-start gap-3">
-                  <div class="text-center" style="min-width: 60px;">
-                    <div class="fw-bold text-primary">3:00</div>
-                    <div class="text-secondary small">PM</div>
-                  </div>
-                  <div class="flex-grow-1">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                      <h6 class="fw-bold mb-0">Proposal Deadline</h6>
-                      <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1">Deadline</span>
-                    </div>
-                    <p class="text-secondary small mb-0">Submit final proposal for the SaaS platform project.</p>
-                    <div class="d-flex flex-wrap gap-3 mt-2">
-                      <span class="text-secondary small"><i class="fas fa-file-pdf me-1"></i>Proposal</span>
-                      <span class="text-secondary small"><i class="fas fa-clock me-1"></i>Due date</span>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="editEvent(5)">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-success btn-sm rounded-pill" onclick="completeEvent(5)">
-                      <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteEvent(5)">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- schedule pagination -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2">
-              <div class="text-secondary small">
-                Showing <span id="scheduleStart">1</span>-<span id="scheduleEnd">5</span> of <span id="scheduleTotal">5</span> events
-              </div>
-              <button class="btn btn-primary btn-sm rounded-pill px-4" id="scheduleNext" onclick="nextSchedule()">
-                Next <i class="fas fa-chevron-right ms-1"></i>
-              </button>
             </div>
 
           </div>
+
 
         </div>
 

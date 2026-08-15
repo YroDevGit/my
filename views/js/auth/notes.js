@@ -37,8 +37,12 @@ addNoteModal.form_submit((data, raw)=>{
     })
 });
 
-Ctr.click("#addnote", ()=>{
+Ctr.click(".addnote", ()=>{
     addNoteModal.show();
+});
+
+Ctr.click(".refreshbtn", ()=>{
+    location.href = location.pathname;
 });
 
 Ctr.click(".deletebtn", (btn, attr)=>{
