@@ -42,14 +42,6 @@ use Classes\Ctrx;
              <i class="fas fa-server"></i>
              <span class="nav-text">Hosting</span>
          </a>
-         <a href="#" class="nav-link">
-             <i class="fas fa-chart-line"></i>
-             <span class="nav-text">Analytics</span>
-         </a>
-         <a href="#" class="nav-link">
-             <i class="fas fa-cog"></i>
-             <span class="nav-text">Settings</span>
-         </a>
 
          <div class="nav-section-title mt-3">Support</div>
          <?php if (Ctrx::get_user_role() == "SA"): ?>

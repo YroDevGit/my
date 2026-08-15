@@ -50,7 +50,7 @@ $devs = Devteam::getAll();
   <!-- ========== HERO ========== -->
   <section class="brand-gradient text-white pt-5 pb-5" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
     <div class="container py-3 py-md-5">
-      <div class="row align-items-center g-5">
+      <div class="row align-items-center">
         <div class="col-lg-7">
           <span class="pill-badge text-dark bg-white bg-opacity-15 mb-3 d-inline-block">
             <i class="fas fa-rocket me-2"></i>Launch your next web app
@@ -259,25 +259,23 @@ $devs = Devteam::getAll();
         <p class="section-sub lead mx-auto" style="max-width: 640px;">Passionate developers, designers, and strategists ready to bring your vision to life.</p>
       </div>
 
-
       <div class="team-scroll-wrapper position-relative overflow-hidden">
-        <div class="team-scroll-track d-flex <?=count($devs) < 5 ? "justify-content-center" : ''?>" id="teamScrollTrack">
+        <div class="team-scroll-track d-flex <?= count($devs) < 5 ? "justify-content-center" : '' ?>" id="teamScrollTrack">
 
-          <!-- member 1 -->
           <?php foreach($devs as $k=>$v): ?>
-            <div class="team-member flex-shrink-0 text-center px-3" style="width: 25%;">
-            <div class="px-2">
-              <img src="<?=val($v['img'])?>"
-                alt="John Doe"
-                class="rounded-circle mx-auto mb-3"
-                style="width: 100px; height: 100px; object-fit: cover;">
-              <h5 class="fw-bold mb-0"><?=val($v['name'])?></h5>
-              <span class="text-secondary small"><?= val($v['role']) ?></span>
-              <div class="d-flex justify-content-center gap-3 mt-2">
-                <a href="<?=val($v['url'])?>" target="_blank" class="text-secondary"><i class="fab fa-facebook"></i></a>
+            <div class="team-member flex-shrink-0 text-center px-3 team-member-<?= $k ?>" style="width: 25%;">
+              <div class="px-2">
+                <img src="<?= val($v['img']) ?>"
+                  alt="<?= val($v['name']) ?>"
+                  class="rounded-circle mx-auto mb-3"
+                  style="width: 100px; height: 100px; object-fit: cover;">
+                <h5 class="fw-bold mb-0"><?= val($v['name']) ?></h5>
+                <span class="text-secondary small"><?= val($v['role']) ?></span>
+                <div class="d-flex justify-content-center gap-3 mt-2">
+                  <a href="<?= val($v['url']) ?>" target="_blank" class="text-secondary"><i class="fab fa-facebook"></i></a>
+                </div>
               </div>
             </div>
-          </div>
           <?php endforeach; ?>
 
         </div>

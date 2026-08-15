@@ -148,32 +148,33 @@
    will-change: transform;
  }
 
- /* Responsive: show fewer members on smaller screens */
- @media (max-width: 992px) {
-   .team-member {
-     width: 33.33% !important;
-   }
- }
+ /* ===== RESPONSIVE BREAKPOINTS ===== */
 
- @media (max-width: 768px) {
-   .team-member {
-     width: 50% !important;
-   }
- }
+/* Tablets: show 3 members */
+@media (max-width: 992px) {
+  .team-scroll-track.carousel-mode .team-member {
+    width: 33.33% !important;
+    flex: 0 0 33.33% !important;
+  }
+}
 
- @media (max-width: 480px) {
-   .team-member {
-     width: 100% !important;
-   }
+/* Mobile: show 2 members */
+@media (max-width: 768px) {
+  .team-scroll-track.carousel-mode .team-member {
+    width: 50% !important;
+    flex: 0 0 50% !important;
+  }
+}
 
-   .team-member img {
-     width: 80px !important;
-     height: 80px !important;
-   }
- }
-
- @media (max-width: 576px) {
-   .hero-headline {
-     font-size: 2.2rem;
-   }
- }
+/* Small mobile: show 1 member (full width) */
+@media (max-width: 480px) {
+  .team-scroll-track.carousel-mode .team-member {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  
+  .team-member img {
+    width: 80px !important;
+    height: 80px !important;
+  }
+}

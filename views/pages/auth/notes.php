@@ -13,7 +13,7 @@ $page = get("page");
 $category = get("category") ?? null;
 $search = get("search") ?? null;
 
-$searchData = [];
+$searchData["user_id"] = myID();
 
 if ($category) {
   $searchData['category'] = decrypt($category);
