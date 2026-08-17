@@ -1,5 +1,14 @@
 <?php
+
+use Classes\DB;
+use Tables\Projects;
+
 $page = get("page") ?? 1;
+$find = Projects::paginatedFind(null, $page, 15);
+$data = $find['data'];
+$paginate = $find['pagination'];
+$hasPrev = val($paginate['has_previous'], null);
+$hasNext = val($paginate['has_next'], null);
 
 ?>
 
@@ -11,8 +20,8 @@ $page = get("page") ?? 1;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CodeYro · Projects</title>
-  <?=_bootstrap_css()?>
-  <?=assets_css("auth")?>
+  <?= _bootstrap_css() ?>
+  <?= assets_css("auth") ?>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
@@ -21,12 +30,12 @@ $page = get("page") ?? 1;
   <!-- ===== SIDEBAR OVERLAY (mobile) ===== -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <?=include_page("auth/sidebar")?>
+  <?= include_page("auth/sidebar") ?>
 
   <!-- ===== MAIN WRAPPER ===== -->
   <div class="main-wrapper" id="mainWrapper">
 
-    <?=include_page("auth/nav")?>
+    <?= include_page("auth/nav") ?>
 
     <!-- ===== PAGE CONTENT ===== -->
     <div class="page-content">
@@ -102,8 +111,8 @@ $page = get("page") ?? 1;
             <span class="input-group-text bg-light border-end-0 rounded-start-pill">
               <i class="fas fa-search text-secondary"></i>
             </span>
-            <input type="text" class="form-control bg-light border-start-0 rounded-end-pill" 
-                   placeholder="Search projects...">
+            <input type="text" class="form-control bg-light border-start-0 rounded-end-pill"
+              placeholder="Search projects...">
           </div>
         </div>
         <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">
@@ -124,238 +133,48 @@ $page = get("page") ?? 1;
       <!-- projects grid -->
       <div class="row g-3">
 
-        <!-- project 1 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Completed</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">Finlytics CRM</h5>
-              <p class="text-secondary small mb-3">Custom CRM dashboard with real-time analytics and reporting.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">React</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Node.js</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">PostgreSQL</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #1b3a6b; margin-right: -6px;">JD</span>
-                    <span class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #065f46;">SM</span>
+        <?php foreach ($data as $k => $v): ?>
+          <!-- project 1 -->
+          <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Completed</span>
+                  <div class="dropdown">
+                    <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                      <li>
+                        <hr class="dropdown-divider">
+                      </li>
+                      <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                    </ul>
                   </div>
-                  <span class="text-secondary small">+2 more</span>
                 </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Dec 2024</span>
+                <h5 class="fw-bold mb-1"><?= val($v['name']) ?></h5>
+                <p class="text-secondary small mb-3"><?= val($v['description']) ?></p>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">React</span>
+                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Node.js</span>
+                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">PostgreSQL</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex">
+                      <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #1b3a6b; margin-right: -6px;">JD</span>
+                      <span class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #065f46;">SM</span>
+                    </div>
+                    <span class="text-secondary small">+2 more</span>
+                  </div>
+                  <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Dec 2024</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- project 2 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1">In Progress</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">GreenSpace Dashboard</h5>
-              <p class="text-secondary small mb-3">Real-time analytics dashboard for environmental data tracking.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Vue.js</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Python</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">MongoDB</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #b45309; margin-right: -6px;">MR</span>
-                    <span class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #dc3545;">AC</span>
-                  </div>
-                  <span class="text-secondary small">+1 more</span>
-                </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Jan 2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- project 3 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-1">Pending</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">PropView Portal</h5>
-              <p class="text-secondary small mb-3">Client portal for real estate agents with property listings and scheduling.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Laravel</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">MySQL</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Bootstrap</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #0c5460; margin-right: -6px;">EW</span>
-                    <span class="rounded-circle bg-purple bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #5b21b6;">KL</span>
-                  </div>
-                </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Feb 2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- project 4 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1">In Progress</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">SaaS Platform MVP</h5>
-              <p class="text-secondary small mb-3">Project management tool with built-in invoicing and time tracking.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Next.js</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Prisma</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Tailwind</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #1b3a6b; margin-right: -6px;">TP</span>
-                    <span class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #065f46;">RN</span>
-                  </div>
-                  <span class="text-secondary small">+2 more</span>
-                </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Mar 2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- project 5 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-1">On Hold</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">Mobile App Backend</h5>
-              <p class="text-secondary small mb-3">REST API for fitness tracking mobile app with real-time sync.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Node.js</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Express</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Firebase</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #dc3545; margin-right: -6px;">DB</span>
-                    <span class="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #0c5460;">LW</span>
-                  </div>
-                </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Apr 2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- project 6 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Completed</span>
-                <div class="dropdown">
-                  <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
-                    <i class="fas fa-ellipsis-v"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </div>
-              <h5 class="fw-bold mb-1">E-Commerce Platform</h5>
-              <p class="text-secondary small mb-3">Custom e-commerce solution with subscription management and analytics.</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Django</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">PostgreSQL</span>
-                <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Redis</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex">
-                    <span class="rounded-circle bg-purple bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #5b21b6; margin-right: -6px;">AG</span>
-                    <span class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #b45309;">JM</span>
-                  </div>
-                  <span class="text-secondary small">+1 more</span>
-                </div>
-                <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>May 2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <?php endforeach; ?>
       </div>
 
       <!-- pagination -->
@@ -375,10 +194,11 @@ $page = get("page") ?? 1;
 
     </div>
 
-    <?=include_page("auth/footer")?>
+    <?= include_page("auth/footer") ?>
 
   </div>
 
-  <?=_bootstrap_js()?>
+  <?= _bootstrap_js() ?>
 </body>
+
 </html>
