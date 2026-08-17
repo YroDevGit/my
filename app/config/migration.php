@@ -65,3 +65,21 @@ Migration::table_ts("devteam", [
     "role" => VARCHAR,
     "goto" => ["varchar"=> 200] 
 ], true);
+
+Migration::table_ts("clients", [
+    "id" => PK,
+    "name" => VARCHAR,
+    "details"=> ["varchar"=>250],
+    "contact" => VARCHAR,
+    "address" => ["varchar"=>500],
+    "other" => VARCHAR
+], true);
+
+Migration::table_ts("projects", [
+    "id" => PK,
+    "name" => VARCHAR,
+    "description" => ["varchar"=>500],
+    "client" => INTEGER,
+    "date" => DATETIME,
+    "type" => INTEGER
+]);

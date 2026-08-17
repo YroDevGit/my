@@ -4,6 +4,7 @@
 
 use Classes\Response;
 use Classes\Validator;
+use Tables\Projects;
 
 $name = Validator::body("name")->required()->label("Project name")->maxChars(50)->exec();
 $description = Validator::body("description")->required()->label("Description")->minChars(30)->maxChars(1000)->exec();
@@ -14,3 +15,11 @@ $type = Validator::body("type")->required()->label("Project type")->number()->ex
 if($errors = Validator::errors()){
     Response::code(422)->errors($errors)->send();
 }
+
+Projects::insert([
+    "name" => $name,
+    "description" => $description,
+    "client" => $client,
+    "date" => dbDate($date),
+    "type" => INTEGER
+])

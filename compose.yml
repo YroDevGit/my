@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: ctrx_app_personal
     ports:
-      - "8081:80"
+      - "8300:80"
     volumes:
       - .:/var/www/html
     depends_on:
