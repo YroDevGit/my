@@ -1,14 +1,15 @@
 <?php
 
+use Classes\Date;
 use Classes\DB;
 use Tables\Projects;
 
 $page = get("page") ?? 1;
-$find = Projects::paginatedFind(null, $page, 15);
+$find = Projects::paginatedFind(null, $page, 15, ["order by" => "created_at desc"]);
 $data = $find['data'];
 $paginate = $find['pagination'];
-$hasPrev = val($paginate['has_previous'], null);
-$hasNext = val($paginate['has_next'], null);
+$hasPrev = val($paginate['has_previous']);
+$hasNext = val($paginate['has_next']);
 
 ?>
 
@@ -156,11 +157,6 @@ $hasNext = val($paginate['has_next'], null);
                 </div>
                 <h5 class="fw-bold mb-1"><?= val($v['name']) ?></h5>
                 <p class="text-secondary small mb-3"><?= val($v['description']) ?></p>
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">React</span>
-                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">Node.js</span>
-                  <span class="badge bg-light text-secondary rounded-pill px-3 py-1">PostgreSQL</span>
-                </div>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center gap-2">
                     <div class="d-flex">
@@ -169,7 +165,7 @@ $hasNext = val($paginate['has_next'], null);
                     </div>
                     <span class="text-secondary small">+2 more</span>
                   </div>
-                  <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i>Dec 2024</span>
+                  <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i><?= Date::get_name($v['date'],"M d, Y h:ia") ?></span>
                 </div>
               </div>
             </div>
