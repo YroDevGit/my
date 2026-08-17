@@ -9,7 +9,8 @@ let tmodal = TModal.init({
    form_id: "prodjectForm",
    form: {
         name: {type: "text", label: "Project name"},
-        description: {type: "textarea", label: "Description"}
+        description: {type: "textarea", label: "Description"},
+        client: {tag: "select", label: "Client", options: []}
    }
 });
 
