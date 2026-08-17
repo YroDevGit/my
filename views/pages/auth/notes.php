@@ -36,7 +36,7 @@ $hasNext = $NotesPagination['has_next'] ?? false;
 $hasPrev = $NotesPagination['has_previous'] ?? false;
 $totalPages = $NotesPagination['total_pages'] ?? 0;
 $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->apply("created_at", function($data){
-  return date_locale($data);
+  return dateLocal($data);
 })->sort(["created_at"=>"desc"])->exec();
 ?>
 
