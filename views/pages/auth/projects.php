@@ -35,9 +35,9 @@
           <a href="#" class="btn btn-outline-secondary rounded-pill px-4">
             <i class="fas fa-filter me-2"></i>Filter
           </a>
-          <a href="#" class="btn btn-primary rounded-pill px-4">
+          <span class="btn btn-primary rounded-pill px-4 addproject">
             <i class="fas fa-plus me-2"></i>New Project
-          </a>
+          </span>
         </div>
       </div>
 
