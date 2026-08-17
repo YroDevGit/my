@@ -2,6 +2,7 @@
 
 import Ctr from "../../code/src/mods/ctr";
 import TModal from "../../code/src/mods/modals/tmodal";
+import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 import { getAllClients } from "../_models/clients";
 import { inquiryTypes } from "../_models/inquiry_type";
@@ -38,6 +39,10 @@ function formSubmit(form, data){
         res: (send, code, message, data, errors)=>{
             if(code == 422){
                 tmodal.displayErrors(errors);
+                return;
+            }
+            if(code == 200){
+                Twal.ok("Project added", true);
             }
         }
     })
