@@ -1,4 +1,4 @@
-import { Tyrax } from "../../code/src/tyrux/main";
+import Tyrax from "../../code/src/tyrux/main";
 
 
 export async function inquiryTypes(){

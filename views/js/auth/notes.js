@@ -1,7 +1,7 @@
 import Ctr from "../../code/src/mods/ctr";
 import TModal from "../../code/src/mods/modals/tmodal";
-import { Twal } from "../../code/src/mods/twal";
-import { Tyrax } from "../../code/src/tyrux/main";
+import Twal from "../../code/src/mods/twal";
+import Tyrax from "../../code/src/tyrux/main";
 import { noteCategories } from "../_models/note_category";
 
 

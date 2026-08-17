@@ -3,8 +3,8 @@
 import Ctr from "../../code/src/mods/ctr";
 import FormValidator from "../../code/src/mods/formValidator";
 import ImageSelector from "../../code/src/mods/picker/imageselector";
-import { Twal } from "../../code/src/mods/twal";
-import { Tyrax } from "../../code/src/tyrux/main";
+import Twal from "../../code/src/mods/twal";
+import Tyrax from "../../code/src/tyrux/main";
 
 
 Ctr.submit("#loginForm", (data, raw) => {

@@ -2,7 +2,7 @@
 
 import Ctr from "../../code/src/mods/ctr";
 import TModal from "../../code/src/mods/modals/tmodal";
-import { Tyrax } from "../../code/src/tyrux/main";
+import Tyrax from "../../code/src/tyrux/main";
 import { inquiryTypes } from "../_models/inquiry_type";
 
 let inqtypes = await inquiryTypes();

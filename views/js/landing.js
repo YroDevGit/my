@@ -1,6 +1,6 @@
 import Ctr, { Ctrx } from "../code/src/mods/ctr";
-import { Twal } from "../code/src/mods/twal";
-import { Tyrax } from "../code/src/tyrux/main";
+import Twal from "../code/src/mods/twal";
+import Tyrax from "../code/src/tyrux/main";
 import { inquiryTypes } from "./_models/inquiry_type";
 import TModal from "../code/src/mods/modals/tmodal";
 
