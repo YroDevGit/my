@@ -32,5 +32,6 @@ Router::group(
     ["get" => "client/get"],
     ["delete" => "project/delete"],
     ["get" => "project/getById"],
+    ["put" => "project/update"]
     
 )->middleware("g1");

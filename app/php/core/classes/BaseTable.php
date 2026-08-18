@@ -831,8 +831,12 @@ class BaseTable
         return self::update($where, $data);
     }
 
-    public static function update(array $where, array $data)
+    public static function update(array|int $where, array $data)
     {
+        if(is_int($where)){
+            $self = static::instance();
+            $where = [$self->primaryKey => $where];
+        }
         $self = static::instance();
         $data = $self->filterFillable($data);
         $ts = $self->timestamps;

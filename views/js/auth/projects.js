@@ -37,6 +37,7 @@ Ctr.click(".editbtn", (btn) => {
     Tyrax.get({
         url: "project/getById",
         req: {id: value_id},
+        loading: true,
         res: (send, code, message, data)=>{
             if(code == 200){
                 tmodal.setMeta({ id: value_id }).setTitle("Edit project").show(data);
@@ -51,7 +52,21 @@ Ctr.click(".editbtn", (btn) => {
 function formSubmit(form, data) {
     let id = tmodal.getMeta("id");
     if (id) {
-
+        Tyrax.put({
+            url: "project/update",
+            req: data,
+            params: {id: id},
+            loading: { id: "prodjectForm", size: 40 },
+            res: (send, code, message, data, errors) => {
+                if (code == 422) {
+                    tmodal.displayErrors(errors);
+                    return;
+                }
+                if (code == 200) {
+                    Twal.ok("Project updated", true);
+                }
+            }
+        });
     } else {
         Tyrax.post({
             url: "project/add",
