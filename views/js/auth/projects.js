@@ -39,12 +39,12 @@ Ctr.click(".editbtn", (btn) => {
         req: {id: value_id},
         res: (send, code, message, data)=>{
             if(code == 200){
-                alert("aw");
+                tmodal.setMeta({ id: value_id }).setTitle("Edit project").show(data);
+            }else{
+                Twal.err(message);
+                return;
             }
         }
-    });
-    tmodal.setMeta({ id: value_id }).setTitle("Edit project").show({
-        name: "tyrone"
     });
 });
 
