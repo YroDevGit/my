@@ -122,10 +122,10 @@ $hasNext = val($paginate['has_next']);
               placeholder="Search projects...">
           </div>
         </div>
-        <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">
-          <option value="all">All Status</option>
+        <select class="form-select form-select-sm rounded-pill ptypecb" style="width: auto; min-width: 140px;">
+          <option value="all">Select type</option>
           <?php foreach($projType as $k=>$v): ?>
-            <option value="completed"><?= $v['type'] ?></option>
+            <option value="<?=$v['id']?>"><?= $v['type'] ?></option>
           <?php endforeach; ?>
         </select>
         <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">

@@ -7,7 +7,7 @@ import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 import { getAllClients } from "../_models/clients";
 import { inquiryTypes } from "../_models/inquiry_type";
-console.log(Url.get("page"));
+
 let inqtypes = await inquiryTypes();
 let clients = await getAllClients();
 
@@ -48,4 +48,8 @@ function formSubmit(form, data){
         }
     })
 }
+
+Ctr.change(".ptypecb", (selector)=>{
+    console.log(selector.value);
+});
 
