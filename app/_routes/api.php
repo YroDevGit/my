@@ -29,6 +29,7 @@ Router::group(
     ["get" => "note/get"],
     ["delete" => "note/delete"],
     ["post" => "project/add"],
-    ["get" => "client/get"]
+    ["get" => "client/get"],
+    ["delete" => "project/delete"],
     
 )->middleware("g1");

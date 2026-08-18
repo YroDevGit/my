@@ -8,9 +8,17 @@ use Tables\Projects;
 
 $page = get("page") || 1;
 
+$type = get("type");
+
+$where = [];
+
+if($type){
+  $where["type"] = $type;
+}
+
 $projType = array_column(Inquiry_type::getAll(), null, "id");
 $client = array_column(Clients::getAll(), null, "id");
-$find = Projects::paginatedFind(null, $page, 9, ["order by" => "created_at desc"]);
+$find = Projects::paginatedFind($where, $page, 9, ["order by" => "created_at desc"]);
 $data = $find['data'];
 $paginate = $find['pagination'];
 $hasPrev = val($paginate['has_previous']);
@@ -123,16 +131,10 @@ $hasNext = val($paginate['has_next']);
           </div>
         </div>
         <select class="form-select form-select-sm rounded-pill ptypecb" style="width: auto; min-width: 140px;">
-          <option value="all">Select type</option>
+          <option value="">SELECT TYPE</option>
           <?php foreach($projType as $k=>$v): ?>
             <option value="<?=$v['id']?>"><?= $v['type'] ?></option>
           <?php endforeach; ?>
-        </select>
-        <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="a-z">A-Z</option>
-          <option value="z-a">Z-A</option>
         </select>
       </div>
 
@@ -157,7 +159,7 @@ $hasNext = val($paginate['has_next']);
                       <li>
                         <hr class="dropdown-divider">
                       </li>
-                      <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                      <li><span class="dropdown-item text-danger deletebtn" dataid="<?=encrypt($v['id'])?>"><i class="fas fa-trash me-2"></i>Delete</span></li>
                     </ul>
                   </div>
                 </div>

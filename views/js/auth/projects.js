@@ -49,8 +49,30 @@ function formSubmit(form, data){
     })
 }
 
+if(Url.get("type")){
+    Ctr.set_value(".ptypecb", Url.get("type"));
+}
+
+
 Ctr.change(".ptypecb", (selector)=>{
     let val = selector.value;
     location.href = Url.set_params({type: val});
+});
+
+Ctr.click(".deletebtn",(btn, attributes)=>{
+    let value = attributes["dataid"];
+    Tyrax.delete({
+        url: "project/delete",
+        params: {"id": value},
+        res: (send, code, message)=>{
+            if(code == 422){
+                Twal.err(message);
+                return;
+            }
+            if(code == 200){
+                Twal.ok("Project deleted", true);
+            }
+        }
+    })
 });
 
