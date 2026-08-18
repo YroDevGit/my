@@ -1,12 +1,13 @@
 //Js file for auth/projects
 
 import Ctr from "../../code/src/mods/ctr";
+import Url from "../../code/src/mods/ctrx/url";
 import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 import { getAllClients } from "../_models/clients";
 import { inquiryTypes } from "../_models/inquiry_type";
-
+console.log(Url.get("page"));
 let inqtypes = await inquiryTypes();
 let clients = await getAllClients();
 
