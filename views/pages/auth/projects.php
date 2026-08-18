@@ -6,7 +6,7 @@ use Tables\Clients;
 use Tables\Inquiry_type;
 use Tables\Projects;
 
-$page = get("page") ?? 1;
+$page = get("page") || 1;
 
 $projType = array_column(Inquiry_type::getAll(), null, "id");
 $client = array_column(Clients::getAll(), null, "id");
