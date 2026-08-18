@@ -2,14 +2,20 @@
 
 use Classes\Date;
 use Classes\DB;
+use Tables\Clients;
+use Tables\Inquiry_type;
 use Tables\Projects;
 
 $page = get("page") ?? 1;
-$find = Projects::paginatedFind(null, $page, 15, ["order by" => "created_at desc"]);
+
+$projType = array_column(Inquiry_type::getAll(), null, "id");
+$client = array_column(Clients::getAll(), null, "id");
+$find = Projects::paginatedFind(null, $page, 9, ["order by" => "created_at desc"]);
 $data = $find['data'];
 $paginate = $find['pagination'];
 $hasPrev = val($paginate['has_previous']);
 $hasNext = val($paginate['has_next']);
+
 
 ?>
 
@@ -58,13 +64,13 @@ $hasNext = val($paginate['has_next']);
       </div>
 
       <!-- stats row -->
-      <div class="row g-3 g-md-4 mb-4">
+      <div class="row g-3 g-md-4 mb-4" style="display: none;">
         <div class="col-6 col-md-3">
           <div class="stat-card">
             <div class="d-flex align-items-center gap-3">
               <div class="stat-icon blue"><i class="fas fa-project-diagram"></i></div>
               <div>
-                <div class="stat-value">12</div>
+                <div class="stat-value"><?= $paginate['total_records'] ?></div>
                 <div class="stat-label">Total Projects</div>
               </div>
             </div>
@@ -118,10 +124,9 @@ $hasNext = val($paginate['has_next']);
         </div>
         <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">
           <option value="all">All Status</option>
-          <option value="completed">Completed</option>
-          <option value="in-progress">In Progress</option>
-          <option value="pending">Pending</option>
-          <option value="on-hold">On Hold</option>
+          <?php foreach($projType as $k=>$v): ?>
+            <option value="completed"><?= $v['type'] ?></option>
+          <?php endforeach; ?>
         </select>
         <select class="form-select form-select-sm rounded-pill" style="width: auto; min-width: 140px;">
           <option value="newest">Newest First</option>
@@ -135,12 +140,13 @@ $hasNext = val($paginate['has_next']);
       <div class="row g-3">
 
         <?php foreach ($data as $k => $v): ?>
+          <?php $ptype = val($projType[$v['type']]); ?>
           <!-- project 1 -->
           <div class="col-md-6 col-lg-4">
             <div class="card border-0 shadow-sm h-100">
               <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                  <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Completed</span>
+                  <span class="badge bg-<?= $ptype['color'] ?> bg-opacity-10 text-<?= $ptype['color'] ?> rounded-pill px-3 py-1"><?= $ptype['type'] ?></span>
                   <div class="dropdown">
                     <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
                       <i class="fas fa-ellipsis-v"></i>
@@ -160,12 +166,11 @@ $hasNext = val($paginate['has_next']);
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center gap-2">
                     <div class="d-flex">
-                      <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #1b3a6b; margin-right: -6px;">JD</span>
-                      <span class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight: 600; color: #065f46;">SM</span>
+
                     </div>
-                    <span class="text-secondary small">+2 more</span>
+                    <span class="text-secondary small"></span>
                   </div>
-                  <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i><?= Date::get_name($v['date'],"M d, Y h:ia") ?></span>
+                  <span class="text-secondary small"><i class="far fa-calendar-alt me-1"></i><?= Date::get_name($v['date'], "M d, Y h:ia") ?></span>
                 </div>
               </div>
             </div>
@@ -179,12 +184,16 @@ $hasNext = val($paginate['has_next']);
           Showing 1-6 of 12 projects
         </div>
         <div class="d-flex gap-2">
-          <a href="#" class="btn btn-outline-secondary btn-sm rounded-pill px-4 disabled">
-            <i class="fas fa-chevron-left me-1"></i> Previous
-          </a>
-          <a href="#" class="btn btn-primary btn-sm rounded-pill px-4">
-            Next <i class="fas fa-chevron-right ms-1"></i>
-          </a>
+          <?php if ($hasPrev): ?>
+            <a href="<?=append_url_params(["page"=>$page-1])?>" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+              <i class="fas fa-chevron-left me-1"></i> Previous
+            </a>
+          <?php endif; ?>
+          <?php if ($hasNext): ?>
+            <a href="<?=append_url_params(["page"=>$page+1])?>" class="btn btn-primary btn-sm rounded-pill px-4">
+              Next <i class="fas fa-chevron-right ms-1"></i>
+            </a>
+          <?php endif; ?>
         </div>
       </div>
 
