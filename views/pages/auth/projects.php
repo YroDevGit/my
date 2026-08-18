@@ -155,7 +155,7 @@ $hasNext = val($paginate['has_next']);
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                       <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                      <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                      <li><span class="dropdown-item editbtn" id="<?=encrypt($v['id'])?>"><i class="fas fa-edit me-2"></i>Edit</span></li>
                       <li>
                         <hr class="dropdown-divider">
                       </li>

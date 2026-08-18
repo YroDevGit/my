@@ -16,7 +16,7 @@ let tmodal = TModal.init({
    id: "pr_id",
    form_id: "prodjectForm",
    form: {
-        name: {type: "text", label: "Project name"},
+        name: {type: "text", label: "Project name", id: "awname"},
         description: {type: "textarea", label: "Description"},
         client: {type: "select", label: "Client", options: clients, config: {value: "id", label: "name"}},
         date: {type: "calendar", label: "Date of appointment", attributes: {time: true}},
@@ -25,14 +25,22 @@ let tmodal = TModal.init({
 });
 
 function displayForm(){
-    tmodal.open;
+    tmodal.openNew;
 }
 
 Ctr.click(".addproject", displayForm);
 
 tmodal.form_submit(formSubmit);
 
+Ctr.click(".editbtn", (btn)=>{
+    let id = btn.id;
+    tmodal.setMeta(id).setTitle("Edit project").show({
+        name: "tyrone"
+    });
+});
+
 function formSubmit(form, data){
+
     Tyrax.post({
         url: "project/add",
         req: data,
