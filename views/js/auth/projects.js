@@ -50,6 +50,9 @@ function formSubmit(form, data){
 }
 
 Ctr.change(".ptypecb", (selector)=>{
-    console.log(selector.value);
+    let val = selector.value;
+    console.log(Ctr.append_url_params({aw:1}))
+    return;
+    location.href = Ctr.append_url_params();
 });
 
