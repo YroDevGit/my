@@ -2,9 +2,10 @@
 
 //Add codes here...
 
+use Classes\Ctrx;
 use Classes\Response;
 use Tables\Inquiry_type;
-
+Ctrx::CachedHeader(340);
 $inq = Inquiry_type::getAll();
 
 Response::code(200)->data($inq)->send();
