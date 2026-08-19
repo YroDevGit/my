@@ -10,10 +10,19 @@ $page = get("page") || 1;
 
 $type = get("type");
 
+$search = get("search");
+
 $where = [];
 
-if($type){
+if ($type) {
   $where["type"] = $type;
+}
+
+if ($search) {
+  $where["or"]["like"] = [
+    "name" => $search,
+    "description" => $search
+  ];
 }
 
 $projType = array_column(Inquiry_type::getAll(), null, "id");
@@ -62,9 +71,9 @@ $hasNext = val($paginate['has_next']);
           <p class="text-secondary small mb-0">Manage all your web app projects</p>
         </div>
         <div class="d-flex gap-2">
-          <a href="#" class="btn btn-outline-secondary rounded-pill px-4">
-            <i class="fas fa-filter me-2"></i>Filter
-          </a>
+          <span class="btn btn-outline-secondary rounded-pill px-4 refreshbtn">
+            <i class="fas fa-refresh me-2"></i>Refresh
+          </span>
           <span class="btn btn-primary rounded-pill px-4 addproject">
             <i class="fas fa-plus me-2"></i>New Project
           </span>
@@ -126,16 +135,17 @@ $hasNext = val($paginate['has_next']);
             <span class="input-group-text bg-light border-end-0 rounded-start-pill">
               <i class="fas fa-search text-secondary"></i>
             </span>
-            <input type="text" class="form-control bg-light border-start-0 rounded-end-pill"
-              placeholder="Search projects...">
+            <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill"
+              placeholder="Search projects..." value="<?= get('search') ?>">
           </div>
         </div>
         <select class="form-select form-select-sm rounded-pill ptypecb" style="width: auto; min-width: 140px;">
           <option value="">SELECT TYPE</option>
-          <?php foreach($projType as $k=>$v): ?>
-            <option value="<?=$v['id']?>"><?= $v['type'] ?></option>
+          <?php foreach ($projType as $k => $v): ?>
+            <option value="<?= $v['id'] ?>"><?= $v['type'] ?></option>
           <?php endforeach; ?>
         </select>
+        <button id="searchFilter" class="btn btn-primary"><i class="fas fa-search text-white"></i></button>
       </div>
 
       <!-- projects grid -->
@@ -155,11 +165,11 @@ $hasNext = val($paginate['has_next']);
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                       <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
-                      <li><span class="dropdown-item editbtn" id="<?=encrypt($v['id'])?>"><i class="fas fa-edit me-2"></i>Edit</span></li>
+                      <li><span class="dropdown-item editbtn" id="<?= encrypt($v['id']) ?>"><i class="fas fa-edit me-2"></i>Edit</span></li>
                       <li>
                         <hr class="dropdown-divider">
                       </li>
-                      <li><span class="dropdown-item text-danger deletebtn" dataid="<?=encrypt($v['id'])?>"><i class="fas fa-trash me-2"></i>Delete</span></li>
+                      <li><span class="dropdown-item text-danger deletebtn" dataid="<?= encrypt($v['id']) ?>"><i class="fas fa-trash me-2"></i>Delete</span></li>
                     </ul>
                   </div>
                 </div>
@@ -187,12 +197,12 @@ $hasNext = val($paginate['has_next']);
         </div>
         <div class="d-flex gap-2">
           <?php if ($hasPrev): ?>
-            <a href="<?=append_url_params(["page"=>$page-1])?>" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+            <a href="<?= append_url_params(["page" => $page - 1]) ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
               <i class="fas fa-chevron-left me-1"></i> Previous
             </a>
           <?php endif; ?>
           <?php if ($hasNext): ?>
-            <a href="<?=append_url_params(["page"=>$page+1])?>" class="btn btn-primary btn-sm rounded-pill px-4">
+            <a href="<?= append_url_params(["page" => $page + 1]) ?>" class="btn btn-primary btn-sm rounded-pill px-4">
               Next <i class="fas fa-chevron-right ms-1"></i>
             </a>
           <?php endif; ?>

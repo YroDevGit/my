@@ -28,6 +28,17 @@ function displayForm() {
     tmodal.openNew;
 }
 
+Ctr.click("#searchFilter", ()=>{
+    let value = Ctr.value("#searchInput");
+    if(value){
+        location.href = Url.append_params({search: value});
+    }
+});
+
+Ctr.click(".refreshbtn", ()=>{
+    location.href = location.pathname;
+});
+
 Ctr.click(".addproject", displayForm);
 
 tmodal.form_submit(formSubmit);
