@@ -16,7 +16,7 @@ use Classes\Ctrx;
              <i class="fas fa-th-large"></i>
              <span class="nav-text">Dashboard</span>
          </a>
-         <a href="<?=page('auth/projects')?>" class="nav-link <?=active_class("auth/projects")?>">
+         <a href="<?=page('auth/projects')?>" class="nav-link <?=active_class(["auth/projects", "auth/manageProject"])?>">
              <i class="fas fa-project-diagram"></i>
              <span class="nav-text">Projects</span>
          </a>
