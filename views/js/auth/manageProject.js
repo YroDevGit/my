@@ -1,6 +1,7 @@
 //Js file for auth/manageProject
 
 import Ctr from "../../code/src/mods/ctr";
+import $$ from "../../code/src/mods/ctrx/ctrx";
 import Url from "../../code/src/mods/ctrx/url";
 import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
@@ -22,6 +23,9 @@ let modal = TModal.init({
     }
 })
 
+$$.click(".edittask", function(){
+    modal.setMeta(1).setTitle("Edit task").open();
+});
 
 Ctr.click(".addtaskbtn", function(){
     modal.openNew;
