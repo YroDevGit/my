@@ -1,7 +1,10 @@
 //Js file for auth/manageProject
 
 import Ctr from "../../code/src/mods/ctr";
+import Url from "../../code/src/mods/ctrx/url";
 import TModal from "../../code/src/mods/modals/tmodal";
+import Twal from "../../code/src/mods/twal";
+import Tyrax from "../../code/src/tyrux/main";
 
 
 let modal = TModal.init({
@@ -22,4 +25,26 @@ let modal = TModal.init({
 
 Ctr.click(".addtaskbtn", function(){
     modal.openNew;
+});
+
+modal.form_submit(function(data,raw){
+    Tyrax.post({
+        url: "task/add",
+        req: raw,
+        params:{id: Url.get("q")},
+        loading: {id: "AddTaskForm", size: 40},
+        res: (send, code, message, data, errors)=>{
+            if(code == 422){
+                modal.displayErrors(errors);
+                return;
+            }
+            if(code == 401){
+                Twal.err(message);
+                return;
+            }
+            if(code == 200){
+                Twal.ok("New task added", true);
+            }
+        }
+    })
 });

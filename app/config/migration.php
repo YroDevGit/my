@@ -83,3 +83,15 @@ Migration::table_ts("projects", [
     "date" => DATETIME,
     "type" => INTEGER
 ]);
+
+Migration::table_ts("task", [
+    "id" => PK,
+    "project" => INTEGER,
+    "title" => VARCHAR,
+    "description" => ["varchar"=>3000],
+    "img" => ["varchar"=>3000],
+    "prio" => INTEGER,
+    "assign" => INTEGER,
+    "deadline" => DATE_TIMESTAMP,
+    "remarks" => ["varchar" => 2000]
+], true);
