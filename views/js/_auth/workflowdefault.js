@@ -1,3 +1,6 @@
+import Ctr from "../../code/src/mods/ctr";
+import $$ from "../../code/src/mods/ctrx/ctrx";
+import Tyrax from "../../code/src/tyrux/main";
 
 // ===== DRAG & DROP SETUP =====
 let draggedCard = null;
@@ -37,9 +40,15 @@ cards.forEach(card => {
         const modal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
         modal.show();
 
+        if(this.dataset.taskId){
+            $$.set_attributes(".edittask",{"task-id":this.dataset.taskId});
+        }
+
         // Update modal content with task data
         const taskTitle = this.querySelector('h6')?.textContent || 'Task';
+        const description = this.querySelector(".text-truncate-3")?.textContent || "No description";
         document.querySelector('#taskDetailModal .fw-bold').textContent = taskTitle;
+        document.querySelector('#taskDetailModal .task-descr').textContent = description;
     });
 });
 
@@ -68,16 +77,26 @@ columns.forEach(column => {
         this.classList.remove('drag-over');
 
         if (!draggedCard) return;
-
+        
         // Get the card being dragged
         const card = draggedCard;
         const sourceColumn = dragSourceColumn;
         const targetColumn = this;
 
+        const id = card.dataset.taskId;
+
         // Don't do anything if dropped in same column
         if (sourceColumn === targetColumn) {
             return;
         }
+
+        const targetId = targetColumn.dataset.id;
+
+        Tyrax.put({
+            url: "task/updateStatus",
+            params: {status: targetId},
+            data: {task: id},
+        });
 
         // Move the card to the target column
         targetColumn.appendChild(card);

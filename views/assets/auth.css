@@ -300,40 +300,53 @@
  }
 
  /* ===== WORKFLOW STEPS ===== */
-.workflow-step {
-    transition: all 0.2s ease;
-    text-decoration: none !important;
-    border: 2px solid transparent;
-  }
-  
-  .workflow-step:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-  
-  .workflow-step.border-primary {
-    border-color: #1b3a6b !important;
-    background: rgba(27, 58, 107, 0.08) !important;
-  }
-  
-  .text-purple {
-    color: #5b21b6 !important;
-  }
-  
-  .bg-purple {
-    background-color: #ede9fe !important;
-  }
-  
-  .bg-purple.bg-opacity-10 {
-    background-color: rgba(91, 33, 182, 0.1) !important;
-  }
-  
-  /* ===== TASK CHECKBOX ===== */
-  .form-check-input:checked + .form-check-label {
-    text-decoration: line-through;
-    color: #6c757d;
-  }
+ .workflow-step {
+     transition: all 0.2s ease;
+     text-decoration: none !important;
+     border: 2px solid transparent;
+ }
 
+ .workflow-step:hover {
+     transform: translateY(-3px);
+     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+ }
+
+ .workflow-step.border-primary {
+     border-color: #1b3a6b !important;
+     background: rgba(27, 58, 107, 0.08) !important;
+ }
+
+ .text-purple {
+     color: #5b21b6 !important;
+ }
+
+ .bg-purple {
+     background-color: #ede9fe !important;
+ }
+
+ .bg-purple.bg-opacity-10 {
+     background-color: rgba(91, 33, 182, 0.1) !important;
+ }
+
+ /* ===== TASK CHECKBOX ===== */
+ .form-check-input:checked+.form-check-label {
+     text-decoration: line-through;
+     color: #6c757d;
+ }
+
+ .text-truncate-3 {
+     display: -webkit-box;
+     -webkit-line-clamp: 3;
+     -webkit-box-orient: vertical;
+     overflow: hidden;
+ }
+
+ .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
  /* ===== RESPONSIVE ===== */
  @media (max-width: 992px) {
      .sidebar {

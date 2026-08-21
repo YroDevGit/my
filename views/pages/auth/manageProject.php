@@ -1,3 +1,59 @@
+<?php
+
+use Classes\Collection;
+use Classes\Ctrx;
+use Classes\DB;
+use Classes\Request;
+use Tables\Task;
+
+$project = Request::get_decrypt("q");
+
+$mine = get("task");
+
+$where = ["project" => $project];
+
+if($mine){
+    $where = [
+        "project" => $project,
+        "assign" => Ctrx::get_user_data("id")
+    ];
+}
+
+$data = Task::get($where);
+$users = DB::query("select u.id, u.fname, u.lname, u.email, u.type, r.role_code, r.role_title from users u, roles r where u.type = r.id and r.group = 1");
+
+$s1 = Collection::data($data)->equal(["status" => 1])->exec();
+$s2 = Collection::data($data)->equal(["status" => 2])->exec();
+$s3 = Collection::data($data)->equal(["status" => 3])->exec();
+$s4 = Collection::data($data)->equal(["status" => 4])->exec();
+$s5 = Collection::data($data)->equal(["status" => 5])->exec();
+$s6 = Collection::data($data)->equal(["status" => 6])->exec();
+$s7 = Collection::data($data)->equal(["status" => 7])->exec();
+$s8 = Collection::data($data)->equal(["status" => 8])->exec();
+$s9 = Collection::data($data)->equal(["status" => 9])->exec();
+
+function getPriority($id)
+{
+    if ($id == 1) {
+        return ["text" => "Low", "color" => "primary"];
+    }
+    if ($id == 2) {
+        return ["text" => "Medium", "color" => "warning"];
+    }
+    if ($id == 3) {
+        return ["text" => "High", "color" => "danger"];
+    }
+}
+
+
+$user = function ($id) use ($users) {
+    $res = Collection::data($users)->equal(["id" => $id])->exec();
+    if (! $res) return [];
+    return $res[0];
+};
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -326,6 +382,15 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <?php if(get("task")): ?>
+                            <a href="<?= append_url_params(["task" => null]) ?>"><button class="btn btn-primary">Show All task</button></a>
+                        <?php else: ?>
+                            <a href="<?= append_url_params(["task" => "mine"]) ?>"><button class="btn btn-success">Show my task</button></a>
+                        <?php endif; ?>
+                        
+                    </div>
+
                     <!-- Kanban Columns -->
                     <div class="kanban-board d-flex gap-3 overflow-auto pb-3" style="min-height: 400px;">
 
@@ -336,43 +401,31 @@
                                     <span class="fw-bold small text-secondary"><i class="fas fa-inbox me-1"></i> Pending</span>
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">3</span>
                                 </div>
-                                <div class="kanban-items" data-column="pending">
+                                <div class="kanban-items" data-column="pending" data-id="<?= encrypt("1") ?>">
                                     <!-- Task Card 1 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="1">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Design login page UI</h6>
-                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2" style="font-size: 0.6rem;">High</span>
+                                    <?php foreach ($s1 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?></p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Create responsive login page with validation</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;">JD</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
-                                        </div>
-                                    </div>
-                                    <!-- Task Card 2 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="2">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">API Documentation</h6>
-                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2" style="font-size: 0.6rem;">Medium</span>
-                                        </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Write API documentation for endpoints</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #dc3545; font-size: 0.6rem;">AC</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 10</span>
-                                        </div>
-                                    </div>
-                                    <!-- Task Card 3 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="3">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Database Schema</h6>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2" style="font-size: 0.6rem;">Not</span>
-                                        </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Design database schema for CRM</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #b45309; font-size: 0.6rem;">MR</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 12</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
+
                                 </div>
                             </div>
                         </div>
@@ -384,31 +437,29 @@
                                     <span class="fw-bold small text-primary"><i class="fas fa-code me-1"></i> Development</span>
                                     <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">2</span>
                                 </div>
-                                <div class="kanban-items" data-column="development">
-                                    <!-- Task Card 4 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-primary" draggable="true" data-task-id="4">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Implement Auth API</h6>
-                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2" style="font-size: 0.6rem;">High</span>
+                                <div class="kanban-items" data-column="development" data-id="<?= encrypt("2") ?>">
+                                    <?php foreach ($s2 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-primary" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">JWT authentication with refresh tokens</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #065f46; font-size: 0.6rem;">SM</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 8</span>
-                                        </div>
-                                    </div>
-                                    <!-- Task Card 5 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-primary" draggable="true" data-task-id="5">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Dashboard Layout</h6>
-                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2" style="font-size: 0.6rem;">Medium</span>
-                                        </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Build responsive dashboard layout</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #0c5460; font-size: 0.6rem;">EW</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 9</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -420,19 +471,29 @@
                                     <span class="fw-bold small text-warning"><i class="fas fa-vial me-1"></i> Testing</span>
                                     <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">1</span>
                                 </div>
-                                <div class="kanban-items" data-column="testing">
-                                    <!-- Task Card 6 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-warning" draggable="true" data-task-id="6">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">User Flow Testing</h6>
-                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2" style="font-size: 0.6rem;">Medium</span>
+                                <div class="kanban-items" data-column="testing" data-id="<?= encrypt("3") ?>">
+                                    <?php foreach ($s3 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-warning" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Test complete user journey</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #065f46; font-size: 0.6rem;">RN</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 14</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -444,19 +505,30 @@
                                     <span class="fw-bold small text-info"><i class="fas fa-server me-1"></i> Staging</span>
                                     <span class="badge bg-info bg-opacity-10 text-info rounded-pill">1</span>
                                 </div>
-                                <div class="kanban-items" data-column="staging">
+                                <div class="kanban-items" data-column="staging" data-id="<?= encrypt("4") ?>">
                                     <!-- Task Card 7 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-info" draggable="true" data-task-id="7">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">API Integration</h6>
-                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2" style="font-size: 0.6rem;">High</span>
+                                    <?php foreach ($s4 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-info" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Test API integration in staging</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #dc3545; font-size: 0.6rem;">AC</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 16</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -468,9 +540,30 @@
                                     <span class="fw-bold small text-success"><i class="fas fa-rocket me-1"></i> Deployed</span>
                                     <span class="badge bg-success bg-opacity-10 text-success rounded-pill">0</span>
                                 </div>
-                                <div class="kanban-items" data-column="deployed">
+                                <div class="kanban-items" data-column="deployed" data-id="<?= encrypt("5") ?>">
                                     <!-- Empty - no tasks -->
-                                    <div class="text-center text-secondary small py-3">No tasks</div>
+                                    <?php foreach ($s5 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-success" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -482,19 +575,30 @@
                                     <span class="fw-bold small text-purple"><i class="fas fa-check-circle me-1"></i> Published</span>
                                     <span class="badge bg-purple bg-opacity-10 text-purple rounded-pill">1</span>
                                 </div>
-                                <div class="kanban-items" data-column="published">
+                                <div class="kanban-items" data-column="published" data-id="<?= encrypt("6") ?>">
                                     <!-- Task Card 8 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-purple" draggable="true" data-task-id="8">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Login Page</h6>
-                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2" style="font-size: 0.6rem;">Done</span>
+                                    <?php foreach ($s6 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-purple" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Login page live on production</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;">JD</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Nov 30</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -506,31 +610,29 @@
                                     <span class="fw-bold small text-secondary"><i class="fas fa-check-double me-1"></i> Done</span>
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">2</span>
                                 </div>
-                                <div class="kanban-items" data-column="done">
-                                    <!-- Task Card 9 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary opacity-75" draggable="true" data-task-id="9">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Project Setup</h6>
-                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2" style="font-size: 0.6rem;">Done</span>
+                                <div class="kanban-items" data-column="done" data-id="<?= encrypt("7") ?>">
+                                    <?php foreach ($s7 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Initial project setup completed</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;">JD</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Nov 1</span>
-                                        </div>
-                                    </div>
-                                    <!-- Task Card 10 -->
-                                    <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary opacity-75" draggable="true" data-task-id="10">
-                                        <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <h6 class="fw-bold small mb-0">Design System</h6>
-                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2" style="font-size: 0.6rem;">Done</span>
-                                        </div>
-                                        <p class="text-secondary small mb-2" style="font-size: 0.7rem;">Design system established</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #0c5460; font-size: 0.6rem;">EW</span>
-                                            <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Nov 5</span>
-                                        </div>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -542,8 +644,29 @@
                                     <span class="fw-bold small text-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
                                     <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">0</span>
                                 </div>
-                                <div class="kanban-items" data-column="rejected">
-                                    <div class="text-center text-secondary small py-3">No tasks</div>
+                                <div class="kanban-items" data-column="rejected" data-id="<?= encrypt("8") ?>">
+                                    <?php foreach ($s8 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-danger" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -555,8 +678,29 @@
                                     <span class="fw-bold small text-secondary"><i class="fas fa-lock me-1"></i> Closed</span>
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">0</span>
                                 </div>
-                                <div class="kanban-items" data-column="closed">
-                                    <div class="text-center text-secondary small py-3">No tasks</div>
+                                <div class="kanban-items" data-column="closed" data-id="<?= encrypt("9") ?>">
+                                    <?php foreach ($s9 as $k => $v): ?>
+                                        <div class="kanban-card bg-white rounded-3 p-3 mb-2 shadow-sm border-start border-3 border-secondary" draggable="true" data-task-id="<?= encrypt($v['id']) ?>">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold small mb-0 text-truncate-2"><?= val($v['title']) ?></h6>
+                                                <span class="badge bg-<?= getPriority($v['prio'])['color'] ?> bg-opacity-10 text-<?= getPriority($v['prio'])['color'] ?> rounded-pill px-2" style="font-size: 0.6rem;"><?= getPriority($v['prio'])['text'] ?></span>
+                                            </div>
+                                            <p class="text-secondary small mb-2 text-truncate-3" style="font-size: 0.7rem;"><?= val($v['description']) ?> </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <?php
+                                                $u = $user($v['assign']);
+                                                ?>
+                                                <?php if ($u): ?>
+                                                    <?php $fn = val($u['fname']); ?>
+                                                    <?php $ln = val($u['lname']); ?>
+                                                    <span class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-weight: 600; color: #1b3a6b; font-size: 0.6rem;"><?= strtoupper($fn[0]) . strtoupper($ln[0]) ?></span>
+                                                <?php else: ?>
+                                                    <span></span>
+                                                <?php endif; ?>
+                                                <span class="text-secondary small" style="font-size: 0.6rem;"><i class="far fa-clock me-1"></i>Dec 5</span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
@@ -751,7 +895,7 @@
                     <div class="row g-3">
                         <div class="col-lg-8">
                             <h6 class="fw-bold">Design login page UI</h6>
-                            <p class="text-secondary small">Create responsive login page with form validation and error handling.</p>
+                            <p class="text-secondary small task-descr">Create responsive login page with form validation and error handling.</p>
 
                             <hr>
                             <h6 class="fw-bold small mb-3"><i class="fas fa-comments me-2"></i>Comments</h6>
@@ -824,14 +968,15 @@
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary rounded-pill px-4">Save Changes</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4 edittask">Edit</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4">Save</button>
                 </div>
             </div>
         </div>
     </div>
 
     <?= _bootstrap_js() ?>
-    <?=js('_auth/workflowdefault')?>
+    <?= js('_auth/workflowdefault') ?>
 
     <style>
         /* ===== KANBAN STYLES ===== */

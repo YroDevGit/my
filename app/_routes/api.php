@@ -34,5 +34,6 @@ Router::group(
     ["get" => "project/getById"],
     ["put" => "project/update"],
     ["post" => "task/add"],
+    ["put" => "task/updateStatus"]
     
 )->middleware("g1");

@@ -93,5 +93,6 @@ Migration::table_ts("task", [
     "prio" => INTEGER,
     "assign" => INTEGER,
     "deadline" => DATE_TIMESTAMP,
-    "remarks" => ["varchar" => 2000]
+    "remarks" => ["varchar" => 2000],
+    "status" => ["int"=>11, "default" => 1],
 ], true);
