@@ -15,7 +15,6 @@ Router::group(
 //Login route
 Router::group(
     ["post" => "user/login"],
-    ["get" => "test/test"]
 )->run(
     function(){
         Ctrx::throttle(5, 180);
