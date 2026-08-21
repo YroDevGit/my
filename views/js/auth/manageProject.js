@@ -23,8 +23,25 @@ let modal = TModal.init({
     }
 })
 
-$$.click(".edittask", function(){
-    modal.setMeta(1).setTitle("Edit task").open();
+$$.click(".edittask", function(btn){
+    let id = $$.get_attribute(btn,"task-id");
+
+    Tyrax.get({
+        url: "task/getById",
+        params: {id: id},
+        loading: true,
+        res: (send, code, message, data)=>{
+            if(code != 200){
+                Twal.err(message);
+                return;
+            }
+            if(code == 200){
+                console.log(data);
+                modal.setMeta(1).setTitle("Edit task").show(data);
+            }
+        }
+    })
+    
 });
 
 Ctr.click(".addtaskbtn", function(){
