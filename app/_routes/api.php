@@ -1,6 +1,8 @@
 <?php
 
 use Classes\Ctrx;
+use Classes\Request;
+use Classes\Response;
 use Classes\Router;
 
 //Public route
@@ -10,6 +12,18 @@ Router::group(
     ["post" => "user/inquire"],
     ["get" => "inquiry_type/get"]
 );
+
+Router::group(
+    ["post" => "email/send"]
+)->run(function(){
+    $apikey = Request::headers("apikey");
+    if(! $apikey){
+        Response::code(unauthorized_code)->message("apikey not found")->send(unauthorized_code);
+    }
+    if($apikey !== env("default_apikey")){
+        Response::code(unauthorized_code)->message("invalid apikey")->send(unauthorized_code);
+    }
+});
 
 
 //Login route
