@@ -940,8 +940,8 @@ $user = function ($id) use ($users) {
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Assigned To</span>
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-weight: 600; color: #1b3a6b; font-size: 0.7rem;">JD</span>
-                                        <span class="small">John Doe</span>
+                                        <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center assignavatar" style="width: 28px; height: 28px; font-weight: 600; color: #1b3a6b; font-size: 0.7rem;">JD</span>
+                                        <span class="small assignname">John Doe</span>
                                     </div>
                                 </div>
                                 <div class="mb-3">

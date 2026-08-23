@@ -42,6 +42,21 @@ cards.forEach(card => {
 
         if(this.dataset.taskId){
             $$.set_attributes(".edittask",{"task-id":this.dataset.taskId});
+            Tyrax.get({
+                url: "task/getAssigne",
+                params: {task: this.dataset.taskId},
+                res: (send, code, message, data, errors)=>{
+                    if(code == 200){
+                        if(! $$.is_empty(data)){
+                            $$.set_html(".assignavatar", `${$$.val(data.fname[0])}${$$.val(data.lname[0])}`);
+                            $$.set_html(".assignname", `${data.fname} ${data.lname}`)
+                        }else{
+                            $$.set_html(".assignavatar", "");
+                            $$.set_html(".assignname", `Not assigned`);
+                        }
+                    }
+                }
+            });
         }
 
         // Update modal content with task data
