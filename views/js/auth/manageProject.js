@@ -13,57 +13,77 @@ let modal = TModal.init({
     title: "Add new task",
     form_id: "AddTaskForm",
     form: {
-        title: {type: "text", label: "Title:"},
-        description: {type: "textarea", label: "Description:"},
-        img: {type: "imagepicker", label: "Images:", config: {dir: "task", multiple:true}},
-        prio: {type: "select", label: "Priority:", options: [{value: 1, label: "Low"}, {value: 2, label: "Medium"}, {value: 3, label: "High"}]},
-        assign: {type: "select", options: []},
-        deadline: {type: "calendar", label: "Deadline:"},
-        remarks: {type: "textarea", label: "Remarks:"}
+        title: { type: "text", label: "Title:" },
+        description: { type: "textarea", label: "Description:" },
+        img: { type: "imagepicker", label: "Images:", config: { dir: "task", multiple: true } },
+        prio: { type: "select", label: "Priority:", options: [{ value: 1, label: "Low" }, { value: 2, label: "Medium" }, { value: 3, label: "High" }] },
+        assign: { type: "select", options: [] },
+        deadline: { type: "calendar", label: "Deadline:" },
+        remarks: { type: "textarea", label: "Remarks:" }
     }
 })
 
-$$.click(".edittask", function(btn){
-    let id = $$.get_attribute(btn,"task-id");
+$$.click(".deletetask", (btn) => {
+
+    Twal.ask("Are you sure to delete", deleteTask);
+
+    function deleteTask() {
+        let id = $$.get_attribute(btn, "task-id");
+        Tyrax.delete({
+            url: "task/delete",
+            params: { task: id },
+            res: (send, code, message) => {
+                if (code == 200) {
+                    Twal.ok("Task deleted");
+                } else {
+                    Twal.err(message);
+                }
+            }
+        });
+    }
+});
+
+$$.click(".edittask", function (btn) {
+    let id = $$.get_attribute(btn, "task-id");
 
     Tyrax.get({
         url: "task/getById",
-        params: {id: id},
+        params: { id: id },
         loading: true,
-        res: (send, code, message, data)=>{
-            if(code != 200){
+        res: (send, code, message, data) => {
+            if (code != 200) {
                 Twal.err(message);
                 return;
             }
-            if(code == 200){
+            if (code == 200) {
                 console.log(data);
                 modal.setMeta(1).setTitle("Edit task").show(data);
             }
         }
     })
-    
+
 });
 
-Ctr.click(".addtaskbtn", function(){
+Ctr.click(".addtaskbtn", function () {
     modal.openNew;
 });
 
-modal.form_submit(function(data,raw){
+modal.form_submit(function (data, raw) {
     Tyrax.post({
         url: "task/add",
         req: raw,
-        params:{id: Url.get("q")},
-        loading: {id: "AddTaskForm", size: 40},
-        res: (send, code, message, data, errors)=>{
-            if(code == 422){
+        params: { id: Url.get("q") },
+        loading: { id: "AddTaskForm", size: 40 },
+        res: (send, code, message, data, errors) => {
+            if (code == 422) {
                 modal.displayErrors(errors);
                 return;
             }
-            if(code == 401){
+            if (code == 401) {
                 Twal.err(message);
                 return;
             }
-            if(code == 200){
+            if (code == 200) {
                 Twal.ok("New task added", true);
             }
         }

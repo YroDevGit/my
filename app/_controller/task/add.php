@@ -5,6 +5,7 @@
 use Classes\Request;
 use Classes\Response;
 use Classes\Validator;
+use Models\Routetasking;
 use Tables\Task;
 
 
@@ -27,7 +28,7 @@ if($errors = Validator::errors()){
 }
 
 
-Task::insert([
+$res = Task::insert([
     "project" => $project,
     "title" => $title,
     "description" => $description,
@@ -37,6 +38,10 @@ Task::insert([
     "deadline" => $deadline,
     "remarks" => $remarks
 ]);
+
+$id = $res->_id();
+
+Routetasking::route($id, 1, val($assign));
 
 Response::code(200)->message("OK")->send();
 

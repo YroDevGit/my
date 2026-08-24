@@ -969,6 +969,7 @@ $user = function ($id) use ($users) {
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-light rounded-pill px-4 edittask">Edit</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4 deletetask">Delete</button>
                     <button type="button" class="btn btn-primary rounded-pill px-4">Save</button>
                 </div>
             </div>

@@ -51,5 +51,6 @@ Router::group(
     ["put" => "task/updateStatus"],
     ["get" => "task/getById"],
     ["get" => "task/getAssigne"],
+    ["delete" => "task/delete"],
     
 )->middleware("g1");

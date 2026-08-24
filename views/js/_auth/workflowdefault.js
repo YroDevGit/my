@@ -42,6 +42,7 @@ cards.forEach(card => {
 
         if(this.dataset.taskId){
             $$.set_attributes(".edittask",{"task-id":this.dataset.taskId});
+            $$.set_attributes(".deletetask",{"task-id":this.dataset.taskId});
             Tyrax.get({
                 url: "task/getAssigne",
                 params: {task: this.dataset.taskId},

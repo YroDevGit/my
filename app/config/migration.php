@@ -96,3 +96,10 @@ Migration::table_ts("task", [
     "remarks" => ["varchar" => 2000],
     "status" => ["int"=>11, "default" => 1],
 ], true);
+
+Migration::table_ts("TaskRoute", [
+    "id" => PK,
+    "task" => INTEGER,
+    "status" => INTEGER,
+    "assign" => INTEGER
+], true);

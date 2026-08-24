@@ -4,6 +4,7 @@
 
 use Classes\Request;
 use Classes\Response;
+use Models\Routetasking;
 use Tables\Task;
 
 $status = Request::get_decrypt("status");
@@ -14,5 +15,6 @@ if(! $status || ! $task){
 }
 
 Task::update($task, ["status"=>$status]);
+Routetasking::route($task, $status, null);
 
 Response::code(200)->message("OK")->send();
