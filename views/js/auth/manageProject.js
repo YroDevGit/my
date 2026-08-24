@@ -8,8 +8,10 @@ import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 
 
-let modal = TModal.init({
-    id: "AddTaskModal",
+$$.modal_unfocus("#taskDetailModal");
+
+let modal_x = TModal.init({
+    id: "Addtsk",
     title: "Add new task",
     form_id: "AddTaskForm",
     form: {
@@ -46,7 +48,7 @@ $$.click(".deletetask", (btn) => {
 
 $$.click(".edittask", function (btn) {
     let id = $$.get_attribute(btn, "task-id");
-
+    
     Tyrax.get({
         url: "task/getById",
         params: { id: id },
@@ -57,8 +59,7 @@ $$.click(".edittask", function (btn) {
                 return;
             }
             if (code == 200) {
-                console.log(data);
-                modal.setMeta(1).setTitle("Edit task").show(data);
+                modal_x.edit(data, id, "Edit task");
             }
         }
     })
@@ -66,10 +67,10 @@ $$.click(".edittask", function (btn) {
 });
 
 Ctr.click(".addtaskbtn", function () {
-    modal.openNew;
+    modal_x.openNew;
 });
 
-modal.form_submit(function (data, raw) {
+modal_x.form_submit(function (data, raw) {
     Tyrax.post({
         url: "task/add",
         req: raw,
@@ -77,7 +78,7 @@ modal.form_submit(function (data, raw) {
         loading: { id: "AddTaskForm", size: 40 },
         res: (send, code, message, data, errors) => {
             if (code == 422) {
-                modal.displayErrors(errors);
+                modal_x.displayErrors(errors);
                 return;
             }
             if (code == 401) {
