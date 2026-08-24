@@ -34,7 +34,8 @@ $$.click(".deletetask", (btn) => {
             params: { task: id },
             res: (send, code, message) => {
                 if (code == 200) {
-                    Twal.ok("Task deleted");
+                    Twal.ok("Task deleted", ()=>$$.reload());
+                    
                 } else {
                     Twal.err(message);
                 }
