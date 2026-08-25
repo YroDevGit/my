@@ -63,8 +63,7 @@ $$.click(".edittask", function (btn) {
                 modal_x.edit(data, id, "Edit task");
             }
         }
-    })
-
+    });
 });
 
 Ctr.click(".addtaskbtn", function () {
@@ -72,23 +71,27 @@ Ctr.click(".addtaskbtn", function () {
 });
 
 modal_x.form_submit(function (data, raw) {
-    Tyrax.post({
-        url: "task/add",
-        req: raw,
-        params: { id: Url.get("q") },
-        loading: { id: "AddTaskForm", size: 40 },
-        res: (send, code, message, data, errors) => {
-            if (code == 422) {
-                modal_x.displayErrors(errors);
-                return;
+    if(modal_x.getMeta()){
+        console.log(modal_x.getMeta())
+    }else{
+        Tyrax.post({
+            url: "task/add",
+            req: raw,
+            params: { id: Url.get("q") },
+            loading: { id: "AddTaskForm", size: 40 },
+            res: (send, code, message, data, errors) => {
+                if (code == 422) {
+                    modal_x.displayErrors(errors);
+                    return;
+                }
+                if (code == 401) {
+                    Twal.err(message);
+                    return;
+                }
+                if (code == 200) {
+                    Twal.ok("New task added", true);
+                }
             }
-            if (code == 401) {
-                Twal.err(message);
-                return;
-            }
-            if (code == 200) {
-                Twal.ok("New task added", true);
-            }
-        }
-    })
+        });
+    }
 });
