@@ -7,6 +7,7 @@ import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 
+$$.scroll_to_element("#projectTabContent", 80);
 
 $$.modal_unfocus("#taskDetailModal");
 
