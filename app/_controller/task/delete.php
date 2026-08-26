@@ -20,7 +20,7 @@ if(! $findTask){
 
 $status = val($findTask['status']);
 
-if($status !=8 ){
+if($status != 8 ){
     Response::code(422)->message("You can only delete rejected task")->send();
 }
 

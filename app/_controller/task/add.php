@@ -27,7 +27,6 @@ if($errors = Validator::errors()){
     Response::code(422)->errors($errors)->send();
 }
 
-
 $res = Task::insert([
     "project" => $project,
     "title" => $title,

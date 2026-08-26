@@ -10,7 +10,8 @@ Router::group(
     ["get" => "admin/add"],
     ["get" => "user/add"],
     ["post" => "user/inquire"],
-    ["get" => "inquiry_type/get"]
+    ["get" => "inquiry_type/get"],
+    ["get" => "task/get"]
 );
 
 Router::group(

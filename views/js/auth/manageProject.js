@@ -72,7 +72,7 @@ Ctr.click(".addtaskbtn", function () {
 
 modal_x.form_submit(function (data, raw) {
     if(modal_x.getMeta()){
-        console.log(modal_x.getMeta())
+        
     }else{
         Tyrax.post({
             url: "task/add",
