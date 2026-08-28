@@ -29,7 +29,7 @@ Router::group(
 
 //Login route
 Router::group(
-    makeRoute(method:"post", controller:"user/logisn", as:"login")
+    makeRoute(method:"post", controller:"user/login", as:"login")
 )->run(
     function(){
         Ctrx::throttle(5, 180);

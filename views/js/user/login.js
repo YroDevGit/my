@@ -9,7 +9,7 @@ import Tyrax from "../../code/src/tyrux/main";
 
 Ctr.submit("#loginForm", (data, raw) => {
     Tyrax.post({
-        url: "user/login",
+        url: "login",
         req: raw,
         loading: { id: "loginForm", size: 35 },
         res: (send, code, message, data, errors) => {
