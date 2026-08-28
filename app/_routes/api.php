@@ -29,7 +29,7 @@ Router::group(
 
 //Login route
 Router::group(
-    makeRoute(method:"post", controller:"user/login")
+    makeRoute(method:"post", controller:"user/logisn", as:"login")
 )->run(
     function(){
         Ctrx::throttle(5, 180);
@@ -38,7 +38,6 @@ Router::group(
 
 
 //Auth route group 1 (g1)
-// Auth route group 1 (g1)
 Router::group(
     makeRoute(method: "post", controller: "note/add"),
     makeRoute(method: "delete", controller: "inquiries/delete"),
