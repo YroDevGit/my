@@ -72,7 +72,25 @@ Ctr.click(".addtaskbtn", function () {
 
 modal_x.form_submit(function (data, raw) {
     if(modal_x.getMeta()){
-        
+        Tyrax.put({
+            url: "task/update",
+            params: {id: modal_x.getMeta()},
+            data: raw,
+            loading: { id: "AddTaskForm", size: 40 },
+            res: (send, code, message, data, errors)=>{
+                if(code == 421){
+                    Twal.err(message);
+                    return;
+                }
+                if(code == 422){
+                    modal_x.displayErrors(errors);
+                    return;
+                }
+                if(code == 200){
+                    Twal.ok("Task details updated", true);
+                }
+            }
+        })
     }else{
         Tyrax.post({
             url: "task/add",

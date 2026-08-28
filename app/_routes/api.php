@@ -7,15 +7,15 @@ use Classes\Router;
 
 //Public route
 Router::group(
-    ["get" => "admin/add"],
-    ["get" => "user/add"],
-    ["post" => "user/inquire"],
-    ["get" => "inquiry_type/get"],
-    ["get" => "task/get"]
+    makeRoute(method: "get", controller: "admin/add"),
+    makeRoute(method: "get", controller: "user/add"),
+    makeRoute(method: "post", controller: "user/inquire"),
+    makeRoute(method: "get", controller: "inquiry_type/get"),
+    makeRoute(method: "get", controller: "task/get")
 );
 
 Router::group(
-    ["post" => "email/send"]
+    makeRoute(method:"post", controller:"email/send")
 )->run(function(){
     $apikey = Request::headers("apikey");
     if(! $apikey){
@@ -29,7 +29,7 @@ Router::group(
 
 //Login route
 Router::group(
-    ["post" => "user/login"],
+    makeRoute(method:"post", controller:"user/login")
 )->run(
     function(){
         Ctrx::throttle(5, 180);
@@ -38,20 +38,21 @@ Router::group(
 
 
 //Auth route group 1 (g1)
+// Auth route group 1 (g1)
 Router::group(
-    ["delete"=> "inquiries/delete"],
-    ["post" => "note/add"],
-    ["get" => "note/get"],
-    ["delete" => "note/delete"],
-    ["post" => "project/add"],
-    ["get" => "client/get"],
-    ["delete" => "project/delete"],
-    ["get" => "project/getById"],
-    ["put" => "project/update"],
-    ["post" => "task/add"],
-    ["put" => "task/updateStatus"],
-    ["get" => "task/getById"],
-    ["get" => "task/getAssigne"],
-    ["delete" => "task/delete"],
-    
+    makeRoute(method: "post", controller: "note/add"),
+    makeRoute(method: "delete", controller: "inquiries/delete"),
+    makeRoute(method: "get", controller: "note/get"),
+    makeRoute(method: "delete", controller: "note/delete"),
+    makeRoute(method: "post", controller: "project/add"),
+    makeRoute(method: "get", controller: "client/get"),
+    makeRoute(method: "delete", controller: "project/delete"),
+    makeRoute(method: "get", controller: "project/getById"),
+    makeRoute(method: "put", controller: "project/update"),
+    makeRoute(method: "post", controller: "task/add"),
+    makeRoute(method: "put", controller: "task/updateStatus"),
+    makeRoute(method: "get", controller: "task/getById"),
+    makeRoute(method: "get", controller: "task/getAssigne"),
+    makeRoute(method: "delete", controller: "task/delete"),
+    makeRoute(method: "put", controller: "task/update")
 )->middleware("g1");

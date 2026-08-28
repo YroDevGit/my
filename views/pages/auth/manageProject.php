@@ -32,6 +32,11 @@ $s7 = Collection::data($data)->equal(["status" => 7])->exec();
 $s8 = Collection::data($data)->equal(["status" => 8])->exec();
 $s9 = Collection::data($data)->equal(["status" => 9])->exec();
 
+$add = count($s1) + count($s2) + count($s3) + count($s4) + count($s5) + count($s6) + count($s7);
+$done = count($s7);
+
+$percent = ($done/$add) * 100;
+
 function getPriority($id)
 {
     if ($id == 1) {
@@ -122,9 +127,9 @@ $user = function ($id) use ($users) {
                             <div class="d-flex align-items-center gap-2">
                                 <span class="text-secondary small">Progress</span>
                                 <div class="progress" style="width: 120px; height: 8px;">
-                                    <div class="progress-bar bg-primary" style="width: 65%;"></div>
+                                    <div class="progress-bar bg-primary" style="width: <?=round($percent, 2)?>%;"></div>
                                 </div>
-                                <span class="fw-semibold small">65%</span>
+                                <span class="fw-semibold small"><?=strval(round($percent,2))?>%</span>
                             </div>
                         </div>
 
@@ -178,7 +183,7 @@ $user = function ($id) use ($users) {
                         </div>
                         <div class="d-flex justify-content-between mt-1">
                             <span class="text-secondary small">Tasks</span>
-                            <span class="fw-semibold small">12 / 18 completed</span>
+                            <span class="fw-semibold small"><?=count($s7)?> / <?=$add?> completed</span>
                         </div>
                     </div>
                 </div>

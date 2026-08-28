@@ -8,7 +8,6 @@ use Classes\Validator;
 use Models\Routetasking;
 use Tables\Task;
 
-
 $project = Request::get_decrypt("id");
 
 if(! $project){
