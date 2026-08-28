@@ -53,5 +53,6 @@ Router::group(
     makeRoute(method: "get", controller: "task/getById"),
     makeRoute(method: "get", controller: "task/getAssigne"),
     makeRoute(method: "delete", controller: "task/delete"),
-    makeRoute(method: "put", controller: "task/update")
+    makeRoute(method: "put", controller: "task/update"),
+    makeRoute(method: "get", controller:"user/getG1"),
 )->middleware("g1");

@@ -6,10 +6,14 @@ import Url from "../../code/src/mods/ctrx/url";
 import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
+import { getAssignees } from "../_models/assignees";
 
 $$.scroll_to_element("#projectTabContent", 80);
 
 $$.modal_unfocus("#taskDetailModal");
+
+let assignees = getAssignees();
+console.log(assignees);
 
 let modal_x = TModal.init({
     id: "Addtsk",
