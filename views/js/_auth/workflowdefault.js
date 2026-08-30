@@ -1,6 +1,7 @@
 import Ctr from "../../code/src/mods/ctr";
 import $$ from "../../code/src/mods/ctrx/ctrx";
 import Tyrax from "../../code/src/tyrux/main";
+import { getPriority } from "../_models/prio";
 
 // ===== DRAG & DROP SETUP =====
 let draggedCard = null;
@@ -44,8 +45,19 @@ cards.forEach(card => {
             $$.set_attributes(".edittask",{"task-id":this.dataset.taskId});
             $$.set_attributes(".deletetask",{"task-id":this.dataset.taskId});
             Tyrax.get({
+                url: "task/getById",
+                params: {id: this.dataset.taskId},
+                loading: {element: ".prioClass"},
+                res: (send, code, message, data, errors)=>{
+                    let prioClass = $$.$(".prioClass");
+                    prioClass.className = `badge bg-${getPriority(data.prio).color} bg-opacity-10 text-${getPriority(data.prio).color} rounded-pill px-3 py-1 prioClass`;
+                    $$.set_html(".prioClass", `${getPriority(data.prio).text}`)
+                }
+            });
+            Tyrax.get({
                 url: "task/getAssigne",
                 params: {task: this.dataset.taskId},
+                loading: {element: ".assignavatar"},
                 res: (send, code, message, data, errors)=>{
                     if(code == 200){
                         if(! $$.is_empty(data)){

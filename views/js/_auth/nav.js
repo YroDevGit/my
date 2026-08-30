@@ -1,0 +1,53 @@
+import $$ from "../../code/src/mods/ctrx/ctrx";
+import TModal from "../../code/src/mods/modals/tmodal";
+import Twal from "../../code/src/mods/twal";
+import Tyrax from "../../code/src/tyrux/main";
+
+let profileModal = TModal.init({
+    id: "profileModal",
+    form_id: "profileModalForm",
+    title: "Edit profile",
+    form:{
+        email: {label: "Email (read only)", attributes: {readonly: true}},
+        fname: {label: "First name"},
+        lname: {label: "Last name"},
+        password: {type: "password", label: "Password"},
+        repassword: {type: "password", label: "Re-enter Password"}
+    }
+});
+
+profileModal.form_submit((data,raw)=>{
+    Tyrax.put({
+        url: "user/update",
+        data: raw,
+        loading: {element: "#profileModalForm", size: 40},
+        res: (send, code, message, data, errors)=>{
+            if(code == 422){
+                profileModal.displayErrors(errors);
+                return;
+            }
+            if(code == 421){
+                Twal.err(message);
+                return;
+            }
+            if(code == 200){
+                Twal.ok("User profile updated", true);
+            }
+        }
+    })
+});
+
+
+$$.click(".my-profile", ()=>{
+    Tyrax.get({
+        url: "user/getById",
+        loading: true,
+        res: (send, code, message, data)=>{
+            profileModal.show({
+                fname: data.fname,
+                lname: data.lname,
+                email: data.email
+            });
+        }
+    });
+});

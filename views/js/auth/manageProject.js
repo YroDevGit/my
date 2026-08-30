@@ -12,8 +12,7 @@ $$.scroll_to_element("#projectTabContent", 80);
 
 $$.modal_unfocus("#taskDetailModal");
 
-let assignees = getAssignees();
-console.log(assignees);
+let assignees =await getAssignees();
 
 let modal_x = TModal.init({
     id: "Addtsk",
@@ -24,7 +23,7 @@ let modal_x = TModal.init({
         description: { type: "textarea", label: "Description:" },
         img: { type: "imagepicker", label: "Images:", config: { dir: "task", multiple: true } },
         prio: { type: "select", label: "Priority:", options: [{ value: 1, label: "Low" }, { value: 2, label: "Medium" }, { value: 3, label: "High" }] },
-        assign: { type: "select", options: [] },
+        assign: { type: "select", options: assignees, config:{value: "id", label: "fullname"} },
         deadline: { type: "calendar", label: "Deadline:" },
         remarks: { type: "textarea", label: "Remarks:" }
     }

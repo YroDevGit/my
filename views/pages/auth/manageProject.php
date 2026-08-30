@@ -940,7 +940,7 @@ $user = function ($id) use ($users) {
                                 </div>
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Priority</span>
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1">High</span>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 prioClass">High</span>
                                 </div>
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Assigned To</span>
