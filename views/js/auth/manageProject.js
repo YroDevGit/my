@@ -57,7 +57,7 @@ $$.click(".deletetask", (btn) => {
 });
 
 $$.click("#comment-btn", (element, attr)=>{
-    let comm = ed.getValue();
+    let comm = ed.value;
     if(! comm) return;
     let taskId = $$.get_attribute(element, "taskid");
     Tyrax.post({
