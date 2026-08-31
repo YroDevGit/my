@@ -1,4 +1,5 @@
 import $$ from "../../code/src/mods/ctrx/ctrx";
+import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 import { getStatus } from "./status";
 
@@ -36,11 +37,10 @@ export function showComments(id){
                     return;
                     }
 
-                    console.log(column.type);
                     if(column.type == 2){
                         let trash =``;
                         if(myId == column.by){
-                            trash = `<small class='fas fa-trash-can text-danger ms-1 deleteComment'></small>`;
+                            trash = `<small class='fas fa-trash-can text-danger ms-1 deleteComment' taskcode="${id}" trashcode="${column.id}"></small>`;
                         }
 
                         $$.add_html("#commentArea", `
@@ -54,6 +54,19 @@ export function showComments(id){
                     return;
                     }
                 });
+                $$.click(".deleteComment", (ele, attr)=>{
+                    Twal.ask("Are you sure to delete this comment?", ()=>{
+                        Tyrax.delete({
+                            url: "task/deleteComment",
+                            params: {id : attr.trashcode},
+                            res: (send, code)=>{
+                                showComments(attr.taskcode);
+                            }
+                        })
+                    })
+                });
+
+                $$.element_auto_scroll_bottom("#commentArea");
             }
         }
     });

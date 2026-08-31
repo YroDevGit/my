@@ -58,5 +58,6 @@ Router::group(
     makeRoute(method: "get", controller:"user/getById"),
     makeRoute(method: "put", controller:"user/update"),
     makeRoute(method:"get", controller:"task/getRoute"),
-    makeRoute(method:"post", controller:"task/sendComment")
+    makeRoute(method:"post", controller:"task/sendComment"),
+    makeRoute(method: "delete", controller:"task/deleteComment"),
 )->middleware("g1");
