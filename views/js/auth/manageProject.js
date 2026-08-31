@@ -2,6 +2,7 @@
 
 import Ctr from "../../code/src/mods/ctr";
 import $$ from "../../code/src/mods/ctrx/ctrx";
+import TextEditor from "../../code/src/mods/ctrx/editor";
 import Url from "../../code/src/mods/ctrx/url";
 import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
@@ -9,16 +10,8 @@ import Tyrax from "../../code/src/tyrux/main";
 import { getAssignees } from "../_models/assignees";
 import { showComments } from "../_models/task";
 
-
-const quill = new Quill('#comment-input', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            ['link', 'image'],
-            [{ list: 'ordered' }, { list: 'bullet' }]
-        ]
-    }
+let ed = await TextEditor.init({
+    element: "#comment-input"
 });
 
 $$.scroll_to_element("#projectTabContent", 80);
@@ -64,7 +57,7 @@ $$.click(".deletetask", (btn) => {
 });
 
 $$.click("#comment-btn", (element, attr)=>{
-    let comm = quill.root.innerHTML;
+    let comm = ed.getValue();
     if(! comm) return;
     let taskId = $$.get_attribute(element, "taskid");
     Tyrax.post({
@@ -74,7 +67,7 @@ $$.click("#comment-btn", (element, attr)=>{
         loading: true,
         res:(send, code, message, data, errors)=>{
             if(code == 200){
-                quill.root.innerHTML = "";
+                ed.clear;
                 showComments(taskId);
                 return;
             }
