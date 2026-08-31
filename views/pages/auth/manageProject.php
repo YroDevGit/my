@@ -12,7 +12,7 @@ $mine = get("task");
 
 $where = ["project" => $project];
 
-if($mine){
+if ($mine) {
     $where = [
         "project" => $project,
         "assign" => Ctrx::get_user_data("id")
@@ -35,7 +35,7 @@ $s9 = Collection::data($data)->equal(["status" => 9])->exec();
 $add = count($s1) + count($s2) + count($s3) + count($s4) + count($s5) + count($s6) + count($s7);
 $done = count($s7);
 
-$percent = ($done/$add) * 100;
+$percent = ($done / $add) * 100;
 
 function getPriority($id)
 {
@@ -68,6 +68,9 @@ $user = function ($id) use ($users) {
     <title>CodeYro · Project Details</title>
     <?= _bootstrap_css() ?>
     <?= assets_css("auth") ?>
+    <link href="<?=assets('quil.css')?>" rel="stylesheet">
+
+    <script src="<?=assets('quil.js')?>"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
@@ -127,9 +130,9 @@ $user = function ($id) use ($users) {
                             <div class="d-flex align-items-center gap-2">
                                 <span class="text-secondary small">Progress</span>
                                 <div class="progress" style="width: 120px; height: 8px;">
-                                    <div class="progress-bar bg-primary" style="width: <?=round($percent, 2)?>%;"></div>
+                                    <div class="progress-bar bg-primary" style="width: <?= round($percent, 2) ?>%;"></div>
                                 </div>
-                                <span class="fw-semibold small"><?=strval(round($percent,2))?>%</span>
+                                <span class="fw-semibold small"><?= strval(round($percent, 2)) ?>%</span>
                             </div>
                         </div>
 
@@ -183,7 +186,7 @@ $user = function ($id) use ($users) {
                         </div>
                         <div class="d-flex justify-content-between mt-1">
                             <span class="text-secondary small">Tasks</span>
-                            <span class="fw-semibold small"><?=count($s7)?> / <?=$add?> completed</span>
+                            <span class="fw-semibold small"><?= count($s7) ?> / <?= $add ?> completed</span>
                         </div>
                     </div>
                 </div>
@@ -388,12 +391,12 @@ $user = function ($id) use ($users) {
                     </div>
 
                     <div class="mb-4">
-                        <?php if(get("task")): ?>
+                        <?php if (get("task")): ?>
                             <a href="<?= append_url_params(["task" => null]) ?>"><button class="btn btn-primary">Show All task</button></a>
                         <?php else: ?>
                             <a href="<?= append_url_params(["task" => "mine"]) ?>"><button class="btn btn-success">Show my task</button></a>
                         <?php endif; ?>
-                        
+
                     </div>
 
                     <!-- Kanban Columns -->
@@ -911,13 +914,13 @@ $user = function ($id) use ($users) {
                             <!-- Comment 1 -->
 
                             <!-- Add comment -->
-                            <div class="d-flex mt-3">
+                            <div class="d-flex mt-3 mb-4">
                                 <span class="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #6c757d; font-size: 0.75rem;margin-right:5px;">JD</span>
                                 <div class="flex-grow-1">
-                                    <input type="text" class="form-control rounded-pill" id="comment-input" placeholder="Add a comment...">
+                                    <div id="comment-input"></div>
                                 </div>
                                 <div>
-                                <button class="btn btn-primary" id="comment-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                                    <button class="btn btn-primary" id="comment-btn"><i class="fa-solid fa-paper-plane"></i></button>
                                 </div>
                             </div>
                         </div>

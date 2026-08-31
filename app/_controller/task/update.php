@@ -26,6 +26,11 @@ if($errors = Validator::errors()){
     Response::code(422)->errors($errors)->send();
 }
 
+$findFirst = Task::findOne([
+    "id"=> $id,
+    "assign"=>val($assign)
+]);
+
 Task::update($id, [
     "title" => $title,
     "description" => $description,
@@ -36,6 +41,8 @@ Task::update($id, [
     "remarks" => $remarks
 ]);
 
-Routetasking::route($id, TaskModel::getCurrentStatus($id), val($assign), type: 1);
+if(! $findFirst){
+    Routetasking::route($id, TaskModel::getCurrentStatus($id), val($assign), type: 1);
+}
 
 Response::code(200)->send();

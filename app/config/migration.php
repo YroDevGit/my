@@ -102,7 +102,7 @@ Migration::table_ts("TaskRoute", [
     "task" => INTEGER,
     "status" => INTEGER,
     "assign" => INTEGER,
-    "comment" => ["varchar"=>500],
+    "comment" => "LONGTEXT",
     "image" => TEXT,
     "by"=> INTEGER,
     "type" => ["int"=>11, "default"=>0]
