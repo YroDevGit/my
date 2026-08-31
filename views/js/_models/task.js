@@ -9,6 +9,7 @@ export function showComments(id){
         params: {id: id},
         res: (send, code, message, data, errors)=>{
             $$.set_html("#commentArea", null);
+            let myId = send.my;
             if(data){
                 data.forEach(column => {
                     if(column.type == 0){
@@ -37,11 +38,16 @@ export function showComments(id){
 
                     console.log(column.type);
                     if(column.type == 2){
+                        let trash =``;
+                        if(myId == column.by){
+                            trash = `<small class='fas fa-trash-can text-danger ms-1 deleteComment'></small>`;
+                        }
+
                         $$.add_html("#commentArea", `
                     <div class="d-flex gap-3 mb-3">
                         <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #1b3a6b; font-size: 0.75rem;">JD</span>
                         <div>
-                            <div class="fw-semibold small">${column.byname} <span class="text-secondary fw-normal">· ${CtrDATE.timeDif(column.created_at)}</span></div>
+                            <div class="fw-semibold small">${column.byname} <span class="text-secondary fw-normal">· ${CtrDATE.timeDif(column.created_at)}</span>${trash}</div>
                             <p class="text-secondary small mb-0">${column.comment}</p>
                         </div>
                     </div>`);
