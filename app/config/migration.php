@@ -101,5 +101,9 @@ Migration::table_ts("TaskRoute", [
     "id" => PK,
     "task" => INTEGER,
     "status" => INTEGER,
-    "assign" => INTEGER
+    "assign" => INTEGER,
+    "comment" => ["varchar"=>500],
+    "image" => TEXT,
+    "by"=> INTEGER,
+    "type" => ["int"=>11, "default"=>0]
 ], true);

@@ -4,7 +4,9 @@
 
 use Classes\Response;
 use Classes\Validator;
+use Models\TaskModel;
 use Tables\Task;
+use Models\Routetasking;
 
 $id = get_decrypt("id");
 
@@ -33,5 +35,7 @@ Task::update($id, [
     "deadline" => $deadline,
     "remarks" => $remarks
 ]);
+
+Routetasking::route($id, TaskModel::getCurrentStatus($id), val($assign), type: 1);
 
 Response::code(200)->send();

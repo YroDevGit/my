@@ -340,6 +340,10 @@
      -webkit-box-orient: vertical;
      overflow: hidden;
  }
+ #commentArea{
+    max-height: 300px;
+    overflow-y:scroll;
+ }
 
  .text-truncate-2 {
     display: -webkit-box;

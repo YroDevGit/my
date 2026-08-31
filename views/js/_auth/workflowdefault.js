@@ -1,7 +1,10 @@
 import Ctr from "../../code/src/mods/ctr";
 import $$ from "../../code/src/mods/ctrx/ctrx";
+import CtrDATE from "../../code/src/mods/date";
 import Tyrax from "../../code/src/tyrux/main";
 import { getPriority } from "../_models/prio";
+import { getStatus } from "../_models/status";
+import { showComments } from "../_models/task";
 
 // ===== DRAG & DROP SETUP =====
 let draggedCard = null;
@@ -44,6 +47,7 @@ cards.forEach(card => {
         if(this.dataset.taskId){
             $$.set_attributes(".edittask",{"task-id":this.dataset.taskId});
             $$.set_attributes(".deletetask",{"task-id":this.dataset.taskId});
+            $$.set_attributes("#comment-btn",{"taskid":this.dataset.taskId});
             Tyrax.get({
                 url: "task/getById",
                 params: {id: this.dataset.taskId},
@@ -54,6 +58,7 @@ cards.forEach(card => {
                     $$.set_html(".prioClass", `${getPriority(data.prio).text}`)
                 }
             });
+            showComments(this.dataset.taskId);
             Tyrax.get({
                 url: "task/getAssigne",
                 params: {task: this.dataset.taskId},

@@ -56,5 +56,7 @@ Router::group(
     makeRoute(method: "put", controller: "task/update"),
     makeRoute(method: "get", controller:"user/getG1"),
     makeRoute(method: "get", controller:"user/getById"),
-    makeRoute(method: "put", controller:"user/update")
+    makeRoute(method: "put", controller:"user/update"),
+    makeRoute(method:"get", controller:"task/getRoute"),
+    makeRoute(method:"post", controller:"task/sendComment")
 )->middleware("g1");

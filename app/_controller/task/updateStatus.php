@@ -5,6 +5,7 @@
 use Classes\Request;
 use Classes\Response;
 use Models\Routetasking;
+use Models\TaskModel;
 use Tables\Task;
 
 $status = Request::get_decrypt("status");
@@ -15,6 +16,6 @@ if(! $status || ! $task){
 }
 
 Task::update($task, ["status"=>$status]);
-Routetasking::route($task, $status, null);
+Routetasking::route($task, $status, TaskModel::getCurrentAssignee($task), type:0);
 
 Response::code(200)->message("OK")->send();

@@ -905,29 +905,19 @@ $user = function ($id) use ($users) {
                             <hr>
                             <h6 class="fw-bold small mb-3"><i class="fas fa-comments me-2"></i>Comments</h6>
 
-                            <!-- Comment 1 -->
-                            <div class="d-flex gap-3 mb-3">
-                                <span class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #1b3a6b; font-size: 0.75rem;">JD</span>
-                                <div>
-                                    <div class="fw-semibold small">John Doe <span class="text-secondary fw-normal">· 2 hours ago</span></div>
-                                    <p class="text-secondary small mb-0">Added initial design files. Please review when you have time.</p>
-                                </div>
-                            </div>
+                            <div id="commentArea">
 
-                            <!-- Comment 2 -->
-                            <div class="d-flex gap-3 mb-3">
-                                <span class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #065f46; font-size: 0.75rem;">SM</span>
-                                <div>
-                                    <div class="fw-semibold small">Sarah Mitchell <span class="text-secondary fw-normal">· 1 hour ago</span></div>
-                                    <p class="text-secondary small mb-0">Looks great! Just need to adjust the spacing on mobile view.</p>
-                                </div>
                             </div>
+                            <!-- Comment 1 -->
 
                             <!-- Add comment -->
-                            <div class="d-flex gap-3 mt-3">
-                                <span class="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #6c757d; font-size: 0.75rem;">JD</span>
+                            <div class="d-flex mt-3">
+                                <span class="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; font-weight: 600; color: #6c757d; font-size: 0.75rem;margin-right:5px;">JD</span>
                                 <div class="flex-grow-1">
-                                    <input type="text" class="form-control rounded-pill" placeholder="Add a comment...">
+                                    <input type="text" class="form-control rounded-pill" id="comment-input" placeholder="Add a comment...">
+                                </div>
+                                <div>
+                                <button class="btn btn-primary" id="comment-btn"><i class="fa-solid fa-paper-plane"></i></button>
                                 </div>
                             </div>
                         </div>

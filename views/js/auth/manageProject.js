@@ -7,6 +7,7 @@ import TModal from "../../code/src/mods/modals/tmodal";
 import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 import { getAssignees } from "../_models/assignees";
+import { showComments } from "../_models/task";
 
 $$.scroll_to_element("#projectTabContent", 80);
 
@@ -48,6 +49,29 @@ $$.click(".deletetask", (btn) => {
             }
         });
     }
+});
+
+$$.click("#comment-btn", (element, attr)=>{
+    let comm = $$.value("#comment-input");
+    if(! comm) return;
+    let taskId = $$.get_attribute(element, "taskid");
+    Tyrax.post({
+        url: "task/sendComment",
+        data: {comment: comm},
+        params: {task: taskId},
+        loading: true,
+        res:(send, code, message, data, errors)=>{
+            if(code == 200){
+                $$.set_value("#comment-input", null);
+                showComments(taskId);
+                return;
+            }
+            if(code == 422){
+                Twal.err(message);
+                return;
+            }
+        }
+    })
 });
 
 $$.click(".edittask", function (btn) {
