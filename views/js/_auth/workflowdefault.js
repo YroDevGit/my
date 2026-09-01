@@ -51,10 +51,13 @@ cards.forEach(card => {
             Tyrax.get({
                 url: "task/getById",
                 params: {id: this.dataset.taskId},
-                loading: {element: ".prioClass"},
+                loading: {element: ".statusmodaldetail"},
                 res: (send, code, message, data, errors)=>{
+                    let resStatus = data.status;
+                    $$.set_html("#modalstatus",getStatus(resStatus).text);
+                    $$.set_class("#modalstatus", `statloading badge bg-${getStatus(resStatus).color} bg-opacity-10 text-${getStatus(resStatus).color} rounded-pill px-3 py-1`);
                     let prioClass = $$.$(".prioClass");
-                    prioClass.className = `badge bg-${getPriority(data.prio).color} bg-opacity-10 text-${getPriority(data.prio).color} rounded-pill px-3 py-1 prioClass`;
+                    prioClass.className = `statloading badge bg-${getPriority(data.prio).color} bg-opacity-10 text-${getPriority(data.prio).color} rounded-pill px-3 py-1 prioClass`;
                     $$.set_html(".prioClass", `${getPriority(data.prio).text}`)
                 }
             });

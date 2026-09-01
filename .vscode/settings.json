@@ -1,0 +1,21 @@
+{
+    "files.exclude": {
+
+        "app": false, // Backend
+        "views": false, // Frontend
+
+
+
+        "vendor": true,
+        ".gitignore": true,
+        "compose.yml": true,
+        "composer.json": true,
+        "composer.lock": true,
+        "Dockerfile": true,
+        "cli": true,
+        ".htaccess": true,
+        "favicon.ico": true,
+        "index.php": true,
+        "jsconfig.json": true,
+    }
+}

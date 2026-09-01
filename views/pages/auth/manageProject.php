@@ -72,6 +72,7 @@ $user = function ($id) use ($users) {
 
     <script src="<?=assets('quil.js')?>"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
 </head>
 
 <body>
@@ -926,14 +927,14 @@ $user = function ($id) use ($users) {
                         </div>
 
                         <div class="col-lg-4">
-                            <div class="bg-light rounded-4 p-3">
+                            <div class="bg-light rounded-4 p-3 statusmodaldetail">
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Status</span>
-                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1">In Progress</span>
+                                    <span id="modalstatus" class="statloading badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1">In Progress</span>
                                 </div>
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Priority</span>
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 prioClass">High</span>
+                                    <span class="statloading badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1 prioClass">High</span>
                                 </div>
                                 <div class="mb-3">
                                     <span class="text-secondary small d-block">Assigned To</span>

@@ -10,7 +10,7 @@ use Tables\Roles;
  * Access only for Authenticated role except customer and visitors
  */
 
-Ctrx::throttle(10);
+Ctrx::throttle(20);
 
 if(! Ctrx::has_user_data()){
     Response::code(unauthorized_code)->message("Unauthorized access")->send(unauthorized_code);
