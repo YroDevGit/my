@@ -35,7 +35,11 @@ $s9 = Collection::data($data)->equal(["status" => 9])->exec();
 $add = count($s1) + count($s2) + count($s3) + count($s4) + count($s5) + count($s6) + count($s7);
 $done = count($s7);
 
-$percent = ($done / $add) * 100;
+if(! $done){
+    $percent = 0; 
+}else{
+    $percent = ($done / $add) * 100;
+}
 
 function getPriority($id)
 {
