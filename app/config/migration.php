@@ -107,3 +107,9 @@ Migration::table_ts("TaskRoute", [
     "by"=> INTEGER,
     "type" => ["int"=>11, "default"=>0]
 ], true);
+
+Migration::table_ts("chat", [
+    "id" => PK,
+    "user"=> INTEGER,
+    "message" => TEXT,
+]);

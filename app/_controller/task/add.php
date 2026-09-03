@@ -39,7 +39,7 @@ $res = Task::insert([
 
 $id = $res->_id();
 
-Routetasking::route($id, 1, val($assign));
+Routetasking::route($id, 1, val($assign), type:3);
 
 Response::code(200)->message("OK")->send();
 
