@@ -40,7 +40,7 @@ DB::bundle(function () {
     ]);
 
     $title = env("app_name");
-    Mail::to($email)->message("You are now a member of $title, your password is $password")->send();
+    //Mail::to($email)->message("You are now a member of $title, your password is $password")->send();
 });
 
 Response::code(200)->send();

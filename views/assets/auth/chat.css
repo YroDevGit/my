@@ -128,8 +128,10 @@
       align-items: stretch !important;
       gap: 12px;
       margin-bottom: 1rem !important;
+      display: none;
   }
   
+
   .page-content .d-flex.flex-wrap > div:first-child {
       width: 100%;
   }
@@ -360,6 +362,14 @@
 @media (max-width: 575.98px) {
   .chat-container .col-lg-3.col-md-4 {
       max-height: 150px;
+  }
+
+  .page-content{
+    padding: 5px;
+  }
+
+  .page-heading{
+    display: none;
   }
   
   .chat-container .col-lg-9.col-md-8 {
