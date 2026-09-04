@@ -30,6 +30,7 @@ Migration::table_ts("users", [
     "type" => INTEGER,
     "fname" => VARCHAR,
     "lname" => VARCHAR,
+    "img" => TEXT
 ], true);
 
 Migration::table_ts("roles", [

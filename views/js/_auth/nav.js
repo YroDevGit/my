@@ -11,15 +11,17 @@ let profileModal = TModal.init({
         email: {label: "Email (read only)", attributes: {readonly: true}},
         fname: {label: "First name"},
         lname: {label: "Last name"},
+        img: {type: "cimage", label: "Photo"},
         password: {type: "password", label: "Password"},
-        repassword: {type: "password", label: "Re-enter Password"}
+        repassword: {type: "password", label: "Re-enter Password"},
     }
 });
 
 profileModal.form_submit((data,raw)=>{
-    Tyrax.put({
+    console.log(data.get("img") instanceof File);
+    Tyrax.post({
         url: "user/update",
-        data: raw,
+        data: data,
         loading: {element: "#profileModalForm", size: 40},
         res: (send, code, message, data, errors)=>{
             if(code == 422){
@@ -46,7 +48,8 @@ $$.click(".my-profile", ()=>{
             profileModal.show({
                 fname: data.fname,
                 lname: data.lname,
-                email: data.email
+                email: data.email,
+                img: data.img
             });
         }
     });

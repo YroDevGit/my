@@ -59,9 +59,11 @@ function receivedChat(clearChat = false){
                 }
             });
 
+            if(clearChat){
+                $$.set_value("#msg", null);
+            }
             setTimeout(() => {
                 if(clearChat){
-                    $$.set_value("#msg", null);
                     $$.element_auto_scroll_bottom("#chatContainer", -500);
                     $$.scroll_to_bottom();
                 }

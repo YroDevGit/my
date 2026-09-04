@@ -2,6 +2,8 @@
 
 //Add codes here...
 
+use Classes\CtrStorage;
+use Classes\File;
 use Classes\Response;
 use Classes\Validator;
 use Tables\Users;
@@ -12,6 +14,21 @@ if (! $id) {
 }
 $fname = Validator::body("fname")->required()->maxChars(50)->alpha()->label("First name")->exec();
 $lname = Validator::body("lname")->required()->maxChars(50)->alpha()->label("Last name")->exec();
+
+$file = File::get("img");
+$filename = post("_img");
+
+if($filename){
+    $filename = CtrStorage::upload_file($file);
+}
+
+if(! $filename){
+    $img = Users::findOne($id);
+    $pict = val($img['img'], "");
+    if($pict){
+        CtrStorage::delete_files($pict);
+    }
+}
 
 if (post("password")) {
     $password = Validator::body("password")->required()->minChars(8)->label("Password")->maxChars(70)->exec();
@@ -31,12 +48,14 @@ if (post("password")) {
     Users::update($id, [
         "fname" => $fname,
         "lname" => $lname,
-        "password" => $password
+        "password" => $password,
+        "img" => $filename
     ]);
 } else {
     Users::update($id, [
         "fname" => $fname,
         "lname" => $lname,
+        "img"=> $filename
     ]);
 }
 sendResponse(code:200);

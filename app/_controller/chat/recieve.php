@@ -23,6 +23,8 @@ $allChat = Collection::data($allChat)->addColumn(function($row) use($id){
 
 $allChat = Collection::data($allChat)->addColumn(function($row) use($id, $usersArray){
     return ["sender"=>$usersArray[$row['user']]["fname"] ?? "Unknown", "avatar"=>strtoupper($usersArray[$row['user']]["fname"][0]?? "").strtoupper($usersArray[$row['user']]["lname"][0]?? "")];
+})->apply("created_at", function($row){
+    return dateLocal($row);
 })->exec();
 
 $allChat = array_reverse($allChat);
