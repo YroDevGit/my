@@ -32,7 +32,7 @@ use Classes\Ctrx;
              <i class="fa fa-sticky-note"></i>
              <span class="nav-text">Notes</span>
          </a>
-         <a href="/auth/chat" class="nav-link <?=active_class('auth/chat')?>">
+         <a href="/auth/msg" class="nav-link <?=active_class('auth/msg')?>">
              <i class="fas fa-envelope"></i>
              <span class="nav-text">Chat</span>
          </a>

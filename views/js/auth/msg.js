@@ -13,12 +13,14 @@ $$.click(".sendbtn", ()=>{
         loading: {element: ".sendbtn", size: 20},
         data: {message: message},
         res: ()=>{
-            receivedChat();
+            receivedChat(true);
         }
     });
 });
 
-function receivedChat(){
+setInterval(receivedChat, 8000);
+
+function receivedChat(clearChat = false){
     Tyrax.get({
         url: "chat/recieve",
         res: (send, code, message, data)=>{
@@ -58,12 +60,14 @@ function receivedChat(){
             });
 
             setTimeout(() => {
-                $$.set_value("#msg", null);
-                $$.element_auto_scroll_bottom("#chatContainer", -500);
-                $$.scroll_to_bottom();
+                if(clearChat){
+                    $$.set_value("#msg", null);
+                    $$.element_auto_scroll_bottom("#chatContainer", -500);
+                    $$.scroll_to_bottom();
+                }
             }, 500);
         }
     });
 }
 
-receivedChat();
+receivedChat(true);
