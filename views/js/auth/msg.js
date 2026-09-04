@@ -26,6 +26,15 @@ function receivedChat(clearChat = false){
         res: (send, code, message, data)=>{
             $$.set_html("#chatContainer", ``);
             data.forEach(column => {
+                let img = column.img;
+                if(img){
+                    img = `<img style="border-radius:50%;" height="30" width="30" src="${img}" alt="">`
+                }else{
+                    img = `<div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" 
+                                style="width: 36px; height: 36px; font-weight: 700; color: #065f46; font-size: 0.7rem;">
+                            ${column.avatar}
+                            </div>`;
+                }
                 if(column.owner == "yes"){
                     $$.add_html("#chatContainer", `
                     <div class="d-flex gap-3 mb-3 justify-content-end">
@@ -35,19 +44,13 @@ function receivedChat(clearChat = false){
                   </div>
                   <span class="text-secondary small" style="font-size: 0.6rem;">${CtrDATE.timeDif(column.created_at)}</span>
                 </div>
-                <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" 
-                     style="width: 36px; height: 36px; font-weight: 700; color: #065f46; font-size: 0.7rem;">
-                  ${column.avatar}
-                </div>
+                ${img}
               </div>
                     `);
                 }else{
                     $$.add_html("#chatContainer", `
                     <div class="d-flex gap-3 mb-3">
-                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" 
-                     style="width: 36px; height: 36px; font-weight: 700; color: #1b3a6b; font-size: 0.7rem;">
-                     ${column.avatar}
-                </div>
+                ${img}
                 <div>
                   <div class="bg-white rounded-4 p-1 shadow-sm" style="max-width: 100%; margin-bottom:-8px;">
                     <p class="mb-0 small">${column.message}</p>

@@ -18,7 +18,7 @@ $lname = Validator::body("lname")->required()->maxChars(50)->alpha()->label("Las
 $file = File::get("img");
 $filename = post("_img");
 
-if($filename){
+if($file){
     $filename = CtrStorage::upload_file($file);
 }
 

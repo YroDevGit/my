@@ -22,7 +22,7 @@ $allChat = Collection::data($allChat)->addColumn(function($row) use($id){
 })->exec();
 
 $allChat = Collection::data($allChat)->addColumn(function($row) use($id, $usersArray){
-    return ["sender"=>$usersArray[$row['user']]["fname"] ?? "Unknown", "avatar"=>strtoupper($usersArray[$row['user']]["fname"][0]?? "").strtoupper($usersArray[$row['user']]["lname"][0]?? "")];
+    return ["img"=>val($usersArray[$row['user']]["img"]),"sender"=>$usersArray[$row['user']]["fname"] ?? "Unknown", "avatar"=>strtoupper($usersArray[$row['user']]["fname"][0]?? "").strtoupper($usersArray[$row['user']]["lname"][0]?? "")];
 })->apply("created_at", function($row){
     return dateLocal($row);
 })->exec();
