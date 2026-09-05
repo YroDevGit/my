@@ -11,7 +11,7 @@ let profileModal = TModal.init({
         email: {label: "Email (read only)", attributes: {readonly: true}},
         fname: {label: "First name"},
         lname: {label: "Last name"},
-        img: {type: "cimage", label: "Photo"},
+        img: {type: "cimage", label: "Photo", config: {quality:30}},
         password: {type: "password", label: "Password"},
         repassword: {type: "password", label: "Re-enter Password"},
     }
@@ -53,4 +53,13 @@ $$.click(".my-profile", ()=>{
             });
         }
     });
+});
+
+Tyrax.get({
+    url: "user/getById",
+    res: (send, code, message, data)=>{
+        if(data.img){
+            $$.set_html(".navatar", `<img src="${data.img}" alt="" height="35" width="35" style="border-radius: 50%;">`)
+        }
+    }
 });

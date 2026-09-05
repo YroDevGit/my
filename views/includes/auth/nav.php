@@ -22,7 +22,7 @@
         </button>
 
         <!-- avatar -->
-        <div class="nav-avatar" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="nav-avatar navatar" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fa fa-user"></i>
         </div>
         <ul class="dropdown-menu dropdown-menu-end">
