@@ -22,7 +22,7 @@ $$.click(".sendbtn", ()=>{
 
 setTimeout(() => {
     receivedChat();
-}, 8500);
+}, 10000);
 
 function receivedChat(clearChat = false){
     Tyrax.get({
