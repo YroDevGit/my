@@ -26,7 +26,11 @@ if(! $filename || $file){
     $img = Users::findOne($id);
     $pict = val($img['img'], "");
     if($pict){
-        CtrStorage::delete_files($pict);
+        try{
+            CtrStorage::delete_files($pict);
+        }catch(Throwable $e){
+            //
+        }
     }
 }
 

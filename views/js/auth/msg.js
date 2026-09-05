@@ -20,7 +20,7 @@ $$.click(".sendbtn", ()=>{
     });
 });
 
-setTimeout(() => {
+setInterval(() => {
     receivedChat();
 }, 10000);
 
