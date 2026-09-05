@@ -2,6 +2,8 @@
 
 import $$ from "../../code/src/mods/ctrx/ctrx";
 import CtrDATE from "../../code/src/mods/date";
+import Secure from "../../code/src/mods/secure";
+import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
 
 $$.click(".sendbtn", ()=>{
@@ -18,7 +20,9 @@ $$.click(".sendbtn", ()=>{
     });
 });
 
-setInterval(receivedChat, 8000);
+setTimeout(() => {
+    receivedChat();
+}, 8500);
 
 function receivedChat(clearChat = false){
     Tyrax.get({
@@ -37,8 +41,10 @@ function receivedChat(clearChat = false){
                 }
                 if(column.owner == "yes"){
                     $$.add_html("#chatContainer", `
-                    <div class="d-flex gap-3 mb-3 justify-content-end">
+                    <div class="d-flex gap-1 mb-3 justify-content-end">
+                    <small class='fa fa-trash-can text-danger user-name-small pt-2 delete-comment' dt=${Secure.encrypt(column.id)}></small>
                 <div class="text-end">
+                
                   <div class="bg-primary text-white p-1 shadow-sm" style="max-width: 100%; text-align:left;border-radius:5px;margin-bottom:-8px;">
                     <p class="mb-0 small">${column.message}</p>
                   </div>
@@ -49,13 +55,14 @@ function receivedChat(clearChat = false){
                     `);
                 }else{
                     $$.add_html("#chatContainer", `
-                    <div class="d-flex gap-3 mb-3">
+                    <div class="d-flex gap-1 mb-3 d-flex-vcenter">
                 ${img}
                 <div>
+                <b><small class='user-name-small'>${column.sender}</small></b>
                   <div class="bg-white rounded-4 p-1 shadow-sm" style="max-width: 100%; margin-bottom:-8px;">
                     <p class="mb-0 small">${column.message}</p>
                   </div>
-                  <span class="text-secondary small" style="font-size: 0.6rem;"><b>${column.sender}</b> ${CtrDATE.timeDif(column.created_at)}</span>
+                  <span class="text-secondary small" style="font-size: 0.6rem;">${CtrDATE.timeDif(column.created_at)}</span>
                 </div>
               </div>
                     `);
@@ -70,6 +77,19 @@ function receivedChat(clearChat = false){
                     $$.element_auto_scroll_bottom("#chatContainer", -500);
                     $$.scroll_to_bottom();
                 }
+                $$.click(".delete-comment", (btn, attr)=>{
+                    Twal.ask("Do you want to delete this comment?", function(){
+                        Tyrax.delete({
+                            url: "chat/delete",
+                            params: {id: Secure.decrypt(attr.dt)},
+                            res: (send, code)=>{
+                                if(code == 200){
+                                    receivedChat(true);
+                                }
+                            }
+                        })
+                    });
+                });
             }, 500);
         }
     });

@@ -22,7 +22,7 @@ if($file){
     $filename = CtrStorage::upload_file($file);
 }
 
-if(! $filename){
+if(! $filename || $file){
     $img = Users::findOne($id);
     $pict = val($img['img'], "");
     if($pict){

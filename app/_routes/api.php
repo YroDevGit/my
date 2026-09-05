@@ -62,5 +62,6 @@ Router::group(
     makeRoute(method: "delete", controller:"task/deleteComment"),
     makeRoute(method:"post", controller:"user/add"),
     makeRoute(method:"post", controller:"chat/send"),
-    makeRoute(method:"get", controller:"chat/recieve")
+    makeRoute(method:"get", controller:"chat/recieve"),
+    makeRoute(method:"delete", controller:"chat/delete")
 )->middleware("g1");
