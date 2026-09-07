@@ -10,8 +10,9 @@ import Tyrax from "../../code/src/tyrux/main";
 import { getAssignees } from "../_models/assignees";
 import { showComments } from "../_models/task";
 
-let ed = await TextEditor.init({
-    element: "#comment-input"
+let ed =  new TextEditor({
+    element: "#comment-input",
+    users: ['Alice Johnson', 'Bob Smith', 'Carol Davis']
 });
 
 $$.scroll_to_element("#projectTabContent", 80);
