@@ -9,8 +9,6 @@ const track = document.getElementById('teamScrollTrack');
 const members = track.querySelectorAll('.team-member');
 const totalMembers = members.length;
 
-
-// Add carousel class for styling
 track.classList.add('carousel-mode');
 
 let currentIndex = 0;
@@ -115,8 +113,8 @@ window.addEventListener('resize', function () {
     id: "modex",
     form_id: "emailus",
     form: {
-      email: { type: "text", label: "<i class='fas fa-at'></i> Enter your email:" },
-      type: { tag: "select", label: "<i class='fas fa-code'></i> Type:", options: itypes, config: { value: "id", label: "type" }, index: "SELECT INQUIRY TYPE" },
+      email: { type: "text", label: "<i class='fas fa-at'></i> Enter your email:", group: "g1"},
+      type: { tag: "select", label: "<i class='fas fa-code'></i> Type:", group: "g1", options: itypes, config: { value: "id", label: "type" }, index: "SELECT INQUIRY TYPE" },
       message: { tag: "textarea", label: "<i class='fas fa-message'></i> Message" },
     }
   });
