@@ -9,8 +9,8 @@ let profileModal = TModal.init({
     title: "Edit profile",
     form:{
         email: {label: "Email (read only)", attributes: {readonly: true}},
-        fname: {label: "First name"},
-        lname: {label: "Last name"},
+        fname: {label: "First name", group: "g1"},
+        lname: {label: "Last name", group: "g1"},
         img: {type: "cimage", label: "Photo", config: {quality:30}},
         password: {type: "password", label: "Password"},
         repassword: {type: "password", label: "Re-enter Password"},

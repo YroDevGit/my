@@ -18,7 +18,7 @@ Ctrx::page_rate_limit(5);
 
 <body class="min-vh-100 d-flex align-items-center justify-content-center p-3">
 
-  <div class="login-card p-4 p-md-5">
+  <div class="login-card p-4 p-md-5" class="popmodal" id="popm">
     
     <!-- back to home -->
     <a href="/" class="back-home text-dark d-inline-flex align-items-center mb-4">

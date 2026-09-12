@@ -2,9 +2,14 @@
 
 import Ctr from "../../code/src/mods/ctr";
 import FormValidator from "../../code/src/mods/formValidator";
+import Popmodal from "../../code/src/mods/modals/popmodal";
 import ImageSelector from "../../code/src/mods/picker/imageselector";
 import Twal from "../../code/src/mods/twal";
 import Tyrax from "../../code/src/tyrux/main";
+
+let p = Popmodal.init("popm",{
+    title: "new",
+});
 
 
 Ctr.submit("#loginForm", (data, raw) => {

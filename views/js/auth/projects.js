@@ -18,8 +18,8 @@ let tmodal = TModal.init({
     form: {
         name: { type: "text", label: "Project name" },
         description: { type: "textarea", label: "Description" },
-        client: { type: "select", label: "Client", options: clients, config: { value: "id", label: "name" } },
-        date: { type: "calendar", label: "Date of appointment", attributes: { time: true } },
+        client: { type: "select", label: "Client", options: clients, config: { value: "id", label: "name" }, group:"g1" },
+        date: { type: "calendar", label: "Date of appointment", attributes: { time: true }, group: "g1" },
         type: { type: "select", label: "Type", options: inqtypes, config: { value: "id", label: "type" } }
     }
 });
