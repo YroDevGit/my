@@ -1,7 +1,7 @@
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import TModal from "../../code/src/mods/modals/tmodal";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import TModal from "../../code/src/mods/modals/tmodal.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
 
 let profileModal = TModal.init({
     id: "profileModal",

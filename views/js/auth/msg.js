@@ -1,10 +1,10 @@
 //Js file for auth/chat
 
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import CtrDATE from "../../code/src/mods/date";
-import Secure from "../../code/src/mods/secure";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import CtrDATE from "../../code/src/mods/date.js";
+import Secure from "../../code/src/mods/secure.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
 
 $$.click(".sendbtn", ()=>{
     let message = $$.value("#msg");

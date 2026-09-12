@@ -1,14 +1,14 @@
 //Js file for auth/manageProject
 
-import Ctr from "../../code/src/mods/ctr";
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import TextEditor from "../../code/src/mods/ctrx/editor";
-import Url from "../../code/src/mods/ctrx/url";
-import TModal from "../../code/src/mods/modals/tmodal";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
-import { getAssignees } from "../_models/assignees";
-import { showComments } from "../_models/task";
+import Ctr from "../../code/src/mods/ctr.js";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import TextEditor from "../../code/src/mods/ctrx/editor.js";
+import Url from "../../code/src/mods/ctrx/url.js";
+import TModal from "../../code/src/mods/modals/tmodal.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
+import { getAssignees } from "../_models/assignees.js";
+import { showComments } from "../_models/task.js";
 
 let ed =  new TextEditor({
     element: "#comment-input",

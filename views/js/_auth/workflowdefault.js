@@ -1,10 +1,10 @@
-import Ctr from "../../code/src/mods/ctr";
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import CtrDATE from "../../code/src/mods/date";
-import Tyrax from "../../code/src/tyrux/main";
-import { getPriority } from "../_models/prio";
-import { getStatus } from "../_models/status";
-import { showComments } from "../_models/task";
+import Ctr from "../../code/src/mods/ctr.js";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import CtrDATE from "../../code/src/mods/date.js";
+import Tyrax from "../../code/src/tyrux/main.js";
+import { getPriority } from "../_models/prio.js";
+import { getStatus } from "../_models/status.js";
+import { showComments } from "../_models/task.js";
 
 // ===== DRAG & DROP SETUP =====
 let draggedCard = null;

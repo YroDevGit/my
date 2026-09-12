@@ -1,5 +1,5 @@
-import Ctr from "../../code/src/mods/ctr";
-import Secure from "../../code/src/mods/secure";
+import Ctr from "../../code/src/mods/ctr.js";
+import Secure from "../../code/src/mods/secure.js";
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

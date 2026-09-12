@@ -1,10 +1,10 @@
 //Js file for auth/people
 
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import Url from "../../code/src/mods/ctrx/url";
-import FormValidator from "../../code/src/mods/formValidator";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import Url from "../../code/src/mods/ctrx/url.js";
+import FormValidator from "../../code/src/mods/formValidator.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
 
 $$.submit("#addEmployeeForm", (data, raw)=>{
     Tyrax.post({

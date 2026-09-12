@@ -1,11 +1,11 @@
 //Js file for user/login
 
-import Ctr from "../../code/src/mods/ctr";
-import FormValidator from "../../code/src/mods/formValidator";
-import Popmodal from "../../code/src/mods/modals/popmodal";
-import ImageSelector from "../../code/src/mods/picker/imageselector";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
+import Ctr from "../../code/src/mods/ctr.js";
+import FormValidator from "../../code/src/mods/formValidator.js";
+import Popmodal from "../../code/src/mods/modals/popmodal.js";
+import ImageSelector from "../../code/src/mods/picker/imageselector.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
 
 let p = Popmodal.init("popm",{
     title: "new",

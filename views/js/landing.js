@@ -1,8 +1,8 @@
-import Ctr, { Ctrx } from "../code/src/mods/ctr";
-import Twal from "../code/src/mods/twal";
-import Tyrax from "../code/src/tyrux/main";
-import { inquiryTypes } from "./_models/inquiry_type";
-import TModal from "../code/src/mods/modals/tmodal";
+import Ctr, { Ctrx } from "../code/src/mods/ctr.js";
+import Twal from "../code/src/mods/twal.js";
+import Tyrax from "../code/src/tyrux/main.js";
+import { inquiryTypes } from "./_models/inquiry_type.js";
+import TModal from "../code/src/mods/modals/tmodal.js";
 
 const itypes = await inquiryTypes();
 const track = document.getElementById('teamScrollTrack');

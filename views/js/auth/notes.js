@@ -1,8 +1,8 @@
-import Ctr from "../../code/src/mods/ctr";
-import TModal from "../../code/src/mods/modals/tmodal";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
-import { noteCategories } from "../_models/note_category";
+import Ctr from "../../code/src/mods/ctr.js";
+import TModal from "../../code/src/mods/modals/tmodal.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
+import { noteCategories } from "../_models/note_category.js";
 
 
 let resCategories = await noteCategories();

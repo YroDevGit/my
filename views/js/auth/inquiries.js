@@ -1,8 +1,8 @@
 //Js file for auth/inquiries
 
-import Ctr from "../../code/src/mods/ctr";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
+import Ctr from "../../code/src/mods/ctr.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
 
 Ctr.click(".msgpop", (ele) => {
    let msg = ele.getAttribute('msg');

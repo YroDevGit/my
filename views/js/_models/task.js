@@ -1,7 +1,7 @@
-import $$ from "../../code/src/mods/ctrx/ctrx";
-import Twal from "../../code/src/mods/twal";
-import Tyrax from "../../code/src/tyrux/main";
-import { getStatus } from "./status";
+import $$ from "../../code/src/mods/ctrx/ctrx.js";
+import Twal from "../../code/src/mods/twal.js";
+import Tyrax from "../../code/src/tyrux/main.js";
+import { getStatus } from "./status.js";
 
 export function showComments(id){
     Tyrax.get({
