@@ -8,7 +8,7 @@ $page =  get("page") ?: 1;
 
 $result = Emails::paginatedFind(["active" => 1], $page, extra:["order by"=>"created_at desc"]);
 $data = $result['data'];
-$pagination = $result['pagination'];
+$pagination = $result;
 $hasNext = $pagination['has_next'];
 ?>
 

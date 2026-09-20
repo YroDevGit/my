@@ -29,7 +29,7 @@ $projType = array_column(Inquiry_type::getAll(), null, "id");
 $client = array_column(Clients::getAll(), null, "id");
 $find = Projects::paginatedFind($where, $page, 9, ["order by" => "created_at desc"]);
 $data = $find['data'];
-$paginate = $find['pagination'];
+$paginate = $find;
 $hasPrev = val($paginate['has_previous']);
 $hasNext = val($paginate['has_next']);
 
