@@ -1,0 +1,1 @@
+import t from"../../code/src/tyrux/main.js";export async function getAllClients(){return await t.async({url:"client/get",dataOnly:!0})}

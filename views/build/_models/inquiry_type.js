@@ -1,0 +1,1 @@
+import{Tyrux as r}from"../../code/src/tyrux/lib/tyrux.js";import t from"../../code/src/tyrux/main.js";export async function inquiryTypes(){let r=await t.async({url:"inquiry_type/get"});return 200==r.code?r.data??[]:[]}

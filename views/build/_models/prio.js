@@ -1,0 +1,1 @@
+export function getPriority(r){return 1==r?{text:"Low",color:"primary"}:2==r?{text:"Medium",color:"warning"}:3==r?{text:"High",color:"danger"}:void 0}

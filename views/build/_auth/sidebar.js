@@ -1,0 +1,1 @@
+import o from"../../code/src/mods/ctr.js";import t from"../../code/src/mods/twal.js";o.click(".logout-btn",()=>{t.ask("Do you want to log out?","/ctrx/logout")});

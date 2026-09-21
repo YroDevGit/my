@@ -1,0 +1,1 @@
+import t from"../../code/src/tyrux/main.js";export async function noteCategories(){return await t.async({url:"note/get",dataOnly:!0})}

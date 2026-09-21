@@ -31,7 +31,7 @@ $page = get("page") ?? 1;
 
 $allNotesResult = Notes::paginatedFind($searchData, $page, 9, ["order by"=>"created_at desc"]);
 
-$NotesPagination = $allNotesResult['pagination'];
+$NotesPagination = $allNotesResult;
 $hasNext = $NotesPagination['has_next'] ?? false;
 $hasPrev = $NotesPagination['has_previous'] ?? false;
 $totalPages = $NotesPagination['total_pages'] ?? 0;

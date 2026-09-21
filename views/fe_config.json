@@ -11,7 +11,7 @@
     "active_class": "active",
     "assets_version": 1.0,
     "js_version": 1.0,
-    "build": false,
+    "build": true,
     "variable": {
         "app_name": "CodeYro",
         "name" : "CodeYro",

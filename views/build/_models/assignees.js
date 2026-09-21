@@ -1,0 +1,1 @@
+import r from"../../code/src/tyrux/main.js";export async function getAssignees(){return await r.async({url:"user/getG1",dataOnly:!0})}

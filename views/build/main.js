@@ -1,0 +1,1 @@
+document.getElementById("copybtn").onclick=function(){navigator.clipboard.writeText("composer create-project yourname/ctrx ctrapp").then(()=>{const e=document.querySelector(".copy-btn");e.innerHTML='<i class="fas fa-check"></i> Copied!',e.classList.add("copied"),setTimeout(()=>{e.innerHTML='<i class="far fa-copy"></i> Copy Command',e.classList.remove("copied")},2e3)})};
