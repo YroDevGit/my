@@ -7,15 +7,6 @@ import ImageSelector from "../../code/src/mods/picker/imageselector.js";
 import Twal from "../../code/src/mods/twal.js";
 import Tyrax from "../../code/src/tyrux/main.js";
 
-
-let mod = Popmodal.init("#loginForm",{
-
-});
-
-setTimeout(() => {
-    mod.open;
-}, 2000);
-
 Ctr.submit("#loginForm", (data, raw) => {
     Tyrax.post({
         url: "login",
