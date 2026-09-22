@@ -36,7 +36,7 @@ Ctrx::page_rate_limit(5);
       </div>
 
       <!-- login form -->
-      <form id="loginForm">
+      <form id="loginForm" class="popmodal">
 
         <!-- email -->
         <div class="mb-3">
