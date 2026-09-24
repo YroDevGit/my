@@ -70,8 +70,8 @@ Ctrx::page_rate_limit(5);
         <!-- remember & forgot -->
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="rememberMe">
-            <label class="form-check-label small text-secondary" for="rememberMe">
+            <input class="form-check-input no-select" type="checkbox" name="remember" id="rememberMe">
+            <label class="form-check-label small text-secondary no-select" for="rememberMe">
               Remember me
             </label>
           </div>

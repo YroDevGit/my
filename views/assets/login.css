@@ -104,6 +104,9 @@
       border-radius: 50px;
       font-size: 0.9rem;
   }
+  .no-select{
+    user-select: none;
+  }
 
   @media (max-width: 480px) {
       .login-card {

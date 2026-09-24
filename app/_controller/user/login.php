@@ -99,5 +99,7 @@ if($findUser['type'] == 1){
 }else{
     Response::code(400)->message("Invalid User")->send();
 }
-
+if($remember = post("remember")){
+    
+}
 Response::code(400)->message("Login error, please contact admin")->send();
