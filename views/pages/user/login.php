@@ -1,8 +1,18 @@
 <?php
 
 use Classes\Ctrx;
+use Classes\TCookie;
 
 Ctrx::page_rate_limit(5);
+
+$username = null;
+$password = null;
+
+if($memory = TCookie::get("remember")){
+  $username = val($memory['email']);
+  $password = val($memory['password']);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,7 +55,7 @@ Ctrx::page_rate_limit(5);
             <span class="input-group-text input-group-text-custom">
               <i class="fas fa-envelope"></i>
             </span>
-            <input type="email" name="email" class="form-control form-control-custom" id="email"
+            <input type="email" name="email" value="<?=$username?>" class="form-control form-control-custom" id="email"
               placeholder="you@example.com" autofocus>
           </div>
           <?= error_text("email") ?>
@@ -58,7 +68,7 @@ Ctrx::page_rate_limit(5);
             <span class="input-group-text input-group-text-custom">
               <i class="fas fa-lock"></i>
             </span>
-            <input type="password" name="password" class="form-control form-control-custom" id="password"
+            <input type="password" name="password" value="<?=$password?>" class="form-control form-control-custom" id="password"
               placeholder="••••••••">
             <button class="btn password-toggle" type="button" id="togglePass">
               <i class="fas fa-eye" id="toggleIcon"></i>
@@ -70,7 +80,7 @@ Ctrx::page_rate_limit(5);
         <!-- remember & forgot -->
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div class="form-check">
-            <input class="form-check-input no-select" type="checkbox" name="remember" id="rememberMe">
+            <input class="form-check-input no-select" <?=$memory ? 'checked' : ''?> type="checkbox" name="remember" id="rememberMe">
             <label class="form-check-label small text-secondary no-select" for="rememberMe">
               Remember me
             </label>

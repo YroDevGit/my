@@ -4,6 +4,7 @@
 
 use Classes\Ctrx;
 use Classes\Response;
+use Classes\TCookie;
 use Classes\Validator;
 use Tables\Users;
 
@@ -30,6 +31,13 @@ $emailPass = $findUser['password'];
 
 if($password !== $emailPass){
     Response::code(401)->message("Incorrect password")->send();
+}
+
+$remember = post("remember");
+if($remember){
+    TCookie::add(key:"remember", value: ["email"=>$email, "password"=>$password]);
+}else{
+    TCookie::delete("remember");
 }
 
 if($findUser['type'] == 1){
@@ -99,7 +107,5 @@ if($findUser['type'] == 1){
 }else{
     Response::code(400)->message("Invalid User")->send();
 }
-if($remember = post("remember")){
-    
-}
+
 Response::code(400)->message("Login error, please contact admin")->send();
