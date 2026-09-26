@@ -56,10 +56,10 @@ $devs = Devteam::getAll();
             <i class="fas fa-rocket me-2"></i>Launch your next web app
           </span>
           <h1 class="display-3 fw-bold hero-headline mb-3">
-            Custom web apps <br>that <span style="border-bottom: 4px solid #68a0ff;">scale</span> your business
+            Custom web apps <br>that scale your business
           </h1>
           <p class="lead hero-sub opacity-90 mb-4 pe-lg-5">
-            From custom dashboards to full‑stack platforms — we build, host, and maintain
+            From custom dashboards to full‑stack platforms. we build, host, and maintain
             web applications tailored to your workflow.
           </p>
           <div class="d-flex flex-wrap gap-3">
@@ -102,47 +102,41 @@ $devs = Devteam::getAll();
 
       <div class="row g-4">
         <!-- card 1: custom web app -->
-        <div class="col-md-6 col-lg-4">
-          <div class="service-card p-4 h-100">
-            <div class="service-icon mb-3"><i class="fas fa-laptop-code"></i></div>
-            <h4 class="fw-bold">Custom web applications</h4>
-            <p class="text-secondary">Tailor‑made dashboards, internal tools, client portals, and SaaS platforms.
-              Built with modern stacks and clean UX.</p>
-            <ul class="list-unstyled small text-secondary">
-              <li><i class="fas fa-check text-primary me-2"></i>User authentication & roles</li>
-              <li><i class="fas fa-check text-primary me-2"></i>API integrations (CRM, payment, etc.)</li>
-              <li><i class="fas fa-check text-primary me-2"></i>Responsive & accessible</li>
-            </ul>
-          </div>
-        </div>
+        <?= Component::service_card(
+          icon: "fa-laptop-code",
+          title: "Custom web applications",
+          subtitle: "Tailor‑made dashboards, internal tools, client portals, and SaaS platforms.
+                      Built with modern stacks and clean UX.",
+          items: [
+            "User authentication & roles",
+            "API integrations (CRM, payment, etc.)",
+            "Responsive & accessible"
+          ]
+        ) ?>
         <!-- card 2: web hosting -->
-        <div class="col-md-6 col-lg-4">
-          <div class="service-card p-4 h-100">
-            <div class="service-icon mb-3"><i class="fas fa-server"></i></div>
-            <h4 class="fw-bold">Web hosting & DevOps</h4>
-            <p class="text-secondary">Reliable cloud hosting, deployment pipelines, and 24/7 monitoring.
-              We handle the infrastructure so your app stays fast.</p>
-            <ul class="list-unstyled small text-secondary">
-              <li><i class="fas fa-check text-primary me-2"></i>AWS / DigitalOcean / VPS</li>
-              <li><i class="fas fa-check text-primary me-2"></i>Automatic SSL & backups</li>
-              <li><i class="fas fa-check text-primary me-2"></i>Scalable and secure</li>
-            </ul>
-          </div>
-        </div>
+        <?= Component::service_card(
+          icon: "fa-server",
+          title: "Web hosting & DevOps",
+          subtitle: "Reliable cloud hosting, deployment pipelines, and 24/7 monitoring.
+                      We handle the infrastructure so your app stays fast.",
+          items: [
+            "AWS / DigitalOcean / VPS",
+            "Automatic SSL & backups",
+            "Scalable and secure"
+          ]
+        ) ?>
         <!-- card 3: more services -->
-        <div class="col-md-6 col-lg-4">
-          <div class="service-card p-4 h-100">
-            <div class="service-icon mb-3"><i class="fas fa-arrows-spin"></i></div>
-            <h4 class="fw-bold">Maintenance & evolution</h4>
-            <p class="text-secondary">Post‑launch support, feature updates, performance tuning, and bug fixes.
-              Keep your app healthy and growing.</p>
-            <ul class="list-unstyled small text-secondary">
-              <li><i class="fas fa-check text-primary me-2"></i>Monthly retainer plans</li>
-              <li><i class="fas fa-check text-primary me-2"></i>Security patches & updates</li>
-              <li><i class="fas fa-check text-primary me-2"></i>Analytics & health reports</li>
-            </ul>
-          </div>
-        </div>
+        <?= Component::service_card(
+          icon: "fa-arrows",
+          title: "Maintenance & evolution",
+          subtitle: "Post‑launch support, feature updates, performance tuning, and bug fixes.
+                      Keep your app healthy and growing.",
+          items: [
+            "Monthly retainer plans",
+            "Security patches & updates",
+            "Analytics & health reports"
+          ]
+        ) ?>
       </div>
 
       <!-- extra relevant: "more" row -->
@@ -171,15 +165,11 @@ $devs = Devteam::getAll();
         <h2 class="section-title display-5">From idea to launch <span style="color: #1b3a6b;">in weeks</span></h2>
       </div>
       <div class="row g-4">
-        <div class="col-md-3">
-          <div class="process-step">
-            <div class="d-flex align-items-center mb-2">
-              <span class="step-number">01</span>
-              <span class="fw-bold">Discovery</span>
-            </div>
-            <p class="text-secondary small">We map your workflows, user stories, and tech requirements.</p>
-          </div>
-        </div>
+        <?= Component::work_card(
+          number: "01",
+          title: "Discovery",
+          description: "We map your workflows, user stories, and tech requirements."
+        ) ?>
         <div class="col-md-3">
           <div class="process-step">
             <div class="d-flex align-items-center mb-2">
@@ -262,7 +252,7 @@ $devs = Devteam::getAll();
       <div class="team-scroll-wrapper position-relative overflow-hidden">
         <div class="team-scroll-track d-flex <?= count($devs) < 5 ? "justify-content-center" : '' ?>" id="teamScrollTrack">
 
-          <?php foreach($devs as $k=>$v): ?>
+          <?php foreach ($devs as $k => $v): ?>
             <div class="team-member flex-shrink-0 text-center px-3 team-member-<?= $k ?>" style="width: 25%;">
               <div class="px-2">
                 <img src="<?= val($v['img']) ?>"

@@ -9,5 +9,6 @@ load_routes(
 // Load files inside views/app/auto/ folder
 load_auto(
     "functions",
-    "global"
+    "global",
+    "components",
 );
