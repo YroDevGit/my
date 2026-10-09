@@ -46,7 +46,6 @@ if($findUser['type'] == 1){
         "email" => $findUser['email']
     ]);
     Ctrx::set_user_role("SA");
-    Ctrx::access_tools();
     Response::code(200)->message("OK")->send();
 }else if($findUser['type'] == 2){
     Ctrx::set_user_data([
