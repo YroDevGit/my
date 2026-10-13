@@ -30,11 +30,10 @@ if (isset($_GET['importConfig']) && $_GET['importConfig'] == "true") {
 
 if (isset($_GET['exportConfig']) && $_GET['exportConfig'] == "true") {
   $file = 'app/php/db/ctrx.db';
-
+  $env = env("environment") ? "_".env("environment") : "";
   header('Content-Type: application/octet-stream');
-  header('Content-Disposition: attachment; filename="ctrx.db"');
+  header("Content-Disposition: attachment; filename=ctrx".$env.".db");
   header('Content-Length: ' . filesize($file));
-
   readfile($file);
   exit;
 }
@@ -269,8 +268,9 @@ if (isset($_GET['exportStorage']) && $_GET['exportStorage'] == "true") {
       redirect(path: "/ctrx", time: 2, exit: false);
     }
 
+    $env = env("environment") ? "_".env("environment") : "";
     header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="storage.zip"');
+    header("Content-Disposition: attachment; filename=storage$env.zip");
     header('Content-Length: ' . filesize($tmpZip));
     header('Pragma: no-cache');
     header('Expires: 0');

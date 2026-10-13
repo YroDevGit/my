@@ -114,6 +114,7 @@ if (str_starts_with($req, "api/")) {
     }
     if (env('single_thread') && env('single_thread') == "yes") {
         if (isset($_COOKIE[ctrxc_ccookie_single_thread()])) {
+            echo "aw";
             exit;
         }
     }
