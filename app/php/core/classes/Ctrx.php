@@ -87,9 +87,20 @@ class Ctrx
         return self::x_rate_limit($limit, $seconds);
     }
 
-    public static function throttle(int $limit, int $seconds = 60, string $route = "")
+    public static function throttle(int $limit, int $seconds = 60, $route = "")
     {
         return self::x_rate_limit($limit, $seconds, $route);
+    }
+
+    public static function throttle_route(int $limit, int $seconds = 60)
+    {
+        return self::x_rate_limit($limit, $seconds, "");
+    }
+
+    public static function throttle_this(string|int $name, int $limit, int $seconds = 60)
+    {
+        $name = current_be()."_".strval($name);
+        return self::x_rate_limit($limit, $seconds, $name);
     }
 
     public static function x_rate_details(string|null $route = "")

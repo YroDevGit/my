@@ -15,6 +15,7 @@ $message = Validator::body("message")->label("Message")->required()->minChars(30
 $type = Validator::body("type")->label("Inquiry type")->required()->in_table($iTable.":id")->run();
 
 if($errors = Validator::errors()){
+    Ctrx::throttle_this("validation",5, 60);
     Response::code(400)->message("Validation failed")->errors($errors)->send();
 }
 
