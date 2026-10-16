@@ -476,6 +476,53 @@ if (! function_exists("has_internet_connection")) {
     }
 }
 
+if(! function_exists("pagedir")){
+    function pagedir(string|null $file = null){
+        $fe = current_page();
+        $fe = trim($fe, " /\\");
+        $fkfile = "/views/pages/". $fe.".php";
+        $dir = dirname($fkfile);
+        if(! $file) return $dir;
+        return $dir."/".$file;
+    }
+}
+
+if(! function_exists("pagedir_include")){
+    function pagedir_include($page){
+        $page = pagedir($page);
+        $page = append_php($page);
+        $page = trim($page, " /\\");
+        include $page;
+    }
+}
+
+if(! function_exists("pagedir_css")){
+    function pagedir_css(string $file){
+        $newfile = pagedir($file);
+        if(! str_ends_with($newfile, ".css")){
+            $newfile = $newfile.".css";
+        }
+        return "<link rel='stylesheet' href='$newfile'>";
+    }
+}
+
+if(! function_exists("pagedir_js")){
+    function pagedir_js(string $file){
+        $newfile = pagedir($file);
+        if(! str_ends_with($newfile, ".js")){
+            $newfile = $newfile.".js";
+        }
+        return "<script type='module' src='$newfile'></script>";
+    }
+}
+
+if(! function_exists("page_assets")){
+    function page_assets(string|null $file = null){
+        if(! $file) return "/views/pages";
+        return "/views/pages/".$file;
+    }
+}
+
 if (! function_exists("get")) {
     function get(string|null $key = null, string|bool $trim = false)
     {

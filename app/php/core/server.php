@@ -114,7 +114,6 @@ if (str_starts_with($req, "api/")) {
     }
     if (env('single_thread') && env('single_thread') == "yes") {
         if (isset($_COOKIE[ctrxc_ccookie_single_thread()])) {
-            echo "aw";
             exit;
         }
     }
@@ -215,6 +214,11 @@ if (str_starts_with($req, "api/")) {
     }
     exit;
 } else {
+    if(str_contains($req, "_")){
+        if(\Classes\Ctrx::_hasUnderscoreDir($req)){
+            \Classes\Ctrx::forbidden_page();
+        }
+    }
     $trnsltn = $_GET['ctrx_translate'] ?? $_SESSION['ctrx_translate'] ?? null;
     if (isset($_GET['ctrx_translate'])) {
         $_SESSION['ctrx_translate'] = $trnsltn;
