@@ -22,7 +22,10 @@ RewriteRule \.(sql|bak|backup|old|orig|tmp)$ - [F,L,NC]
 RewriteRule \.tar\.gz$ - [F,L,NC]
 RewriteRule \.db$ - [F,L,NC]
 
-RewriteRule ^views/pages/ - [F,L]
+RewriteCond %{REQUEST_URI} ^/views/pages/ [NC]
+RewriteCond %{REQUEST_URI} \.(css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|ico|bmp|woff2?|ttf|eot|otf|mp4|webm|ogg|mp3|wav|pdf)$ [NC]
+RewriteRule ^ - [L]
+
 RewriteRule ^views/includes/ - [F,L]
 RewriteRule ^views/core/ - [F,L]
 RewriteRule ^views/app/ - [F,L]

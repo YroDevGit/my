@@ -13,7 +13,7 @@ $page = get("page");
 $category = get("category") ?? null;
 $search = get("search") ?? null;
 
-$searchData["user_id"] = myID();
+$searchData["user_id"] = my_id();
 
 if ($category) {
   $searchData['category'] = decrypt($category);
@@ -36,7 +36,7 @@ $hasNext = $NotesPagination['has_next'] ?? false;
 $hasPrev = $NotesPagination['has_previous'] ?? false;
 $totalPages = $NotesPagination['total_pages'] ?? 0;
 $allNotes = Collection::data($allNotesResult['data'])->encrypt("id")->apply("created_at", function($data){
-  return dateLocal($data);
+  return date_local($data);
 })->sort(["created_at"=>"desc"])->exec();
 ?>
 
