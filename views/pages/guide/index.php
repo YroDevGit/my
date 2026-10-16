@@ -118,7 +118,7 @@
       <div class="callout">
         <p>
           <strong>Read the full story:</strong> the
-          <a href="../concepts/team-workflow.html">Team Workflow</a>
+          <a href="workflow">Team Workflow</a>
           page explains why CTRX is shaped this way and walks through a
           real handoff between backend and frontend developers.
         </p>

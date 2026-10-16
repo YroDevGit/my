@@ -1,9 +1,13 @@
 <aside class="docs-sidebar">
+    <label for="burgercheck" class="burgercheck"><img height="40" width="40" src="https://w7.pngwing.com/pngs/106/494/png-transparent-font-awesome-computer-icons-restaurant-bel-the-dragon-font-hamburger-menu-miscellaneous-rectangle-bel-the-dragon.png" alt=""></label>
+    <input type="checkbox" name="" id="burgercheck">
     <nav>
         <div class="sidebar-section">
             <h4>Getting Started</h4>
             <a href="index">Installation</a>
             <a href="workflow" class="<?=active_class('guide/workflow')?>">Workflow</a>
+            <a href="command" class="<?=active_class("/guide/command")?>">CLI</a>
+            <a href="ai" class="<?=active_class("/guide/ai")?>">AI</a>
         </div>
 
         <div class="sidebar-section">
@@ -14,8 +18,7 @@
             <a href="validator" class="<?=active_class("/guide/validator")?>">Validator</a>
             <a href="middleware.html">Middleware</a>
             <a href="models" class="<?=active_class("/guide/models")?>">Models</a>
-            <a href="session-and-auth.html">Session &amp; Auth</a>
-            <a href="command" class="<?=active_class("/guide/command")?>">CLI</a>
+            <a href="auth" class="<?=active_class("/guide/auth")?>">Session &amp; Auth</a>
         </div>
 
         <div class="sidebar-section">
@@ -33,6 +36,7 @@
             <h4>Tutorials</h4>
             <a href="../tutorials/login-flow.html">Login Flow</a>
             <a href="add" class="<?=active_class('guide/add')?>">Insert Data</a>
+            <a href="form" class="<?=active_class('guide/form')?>">Form flow</a>
             <a href="crud" class="<?=active_class('guide/crud')?>">Task CRUD</a>
         </div>
 
