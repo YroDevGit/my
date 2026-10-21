@@ -1,6 +1,23 @@
 <?php
-if(env('environment') == "prod" || env('environment') == "production"){
-    die("This page is not available.");
+$capiEnv = env("capi_env") ?? "dev,uat,staging";
+$exp = explode(",",$capiEnv);
+$myEnv = env("environment");
+if(! $myEnv){
+    die("@.env environment should not blank.");
+}
+$myEnv = strtolower($myEnv);
+if(! in_array($myEnv, $exp)){
+    die("This page is not available");
+}
+
+if(isset($_GET["capi_encrypt"])){
+    $capienc = $_GET["capi_encrypt"];
+    echo json_encode(["data"=>encrypt($capienc)]);exit;
+}
+
+if(isset($_GET["capi_decrypt"])){
+    $capienc = $_GET["capi_decrypt"];
+    echo json_encode(["data"=>decrypt($capienc)]);exit;
 }
 ?>
 <!DOCTYPE html>
@@ -9,7 +26,7 @@ if(env('environment') == "prod" || env('environment') == "production"){
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API Tester</title>
+    <title>CAPI - CTRX API Tester</title>
     <link rel="stylesheet" href="/views/code/src/capi/ctrx-capi-style.css" />
 </head>
 
@@ -17,7 +34,7 @@ if(env('environment') == "prod" || env('environment') == "production"){
 
     <header class="tester-header">
         <div class="tester-header-inner">
-            <span class="tester-logo">CTRX-<span>APITester</span></span>
+            <span class="tester-logo" title="cAPI by CodeYRO, this is for CTRX api testing.">c<span>API</span></span>
             <div class="tester-actions">
                 <button id="curlBtn" class="tester-btn-icon" title="Generate cURL">cURL</button>
                 <button id="historyToggle" class="tester-btn-icon" title="History">History</button>
@@ -27,7 +44,6 @@ if(env('environment') == "prod" || env('environment') == "production"){
     </header>
 
     <main class="tester-main">
-
         <section class="tester-request">
             <div class="tester-row">
                 <select id="method" class="tester-method">
@@ -41,9 +57,9 @@ if(env('environment') == "prod" || env('environment') == "production"){
             </div>
 
             <div class="tester-tabs">
-                <button class="tester-tab active" data-tab="body">Body raw</button>
-                <button id="bnraw" class="tester-tab active" data-tab="bodyform">Body</button>
-                <button class="tester-tab" data-tab="params">Params</button>
+                <button title="POST json" class="tester-tab active" data-tab="body">Body raw</button>
+                <button title="POST" id="bnraw" class="tester-tab" data-tab="bodyform">Body</button>
+                <button title="GET" class="tester-tab" data-tab="params">Params</button>
                 <button class="tester-tab" data-tab="headers">Headers</button>
                 <button class="tester-tab" data-tab="options">Options</button>
             </div>
@@ -80,6 +96,10 @@ if(env('environment') == "prod" || env('environment') == "production"){
                     <input id="optLoading" type="checkbox" checked />
                     Show loading spinner
                 </label>
+                <div>
+                    <button id="btnencrypt">Encrypt</button>
+                    <button id="btndecrypt">Decrypt</button>
+                </div>
             </div>
         </section>
 
@@ -120,12 +140,17 @@ if(env('environment') == "prod" || env('environment') == "production"){
                 <button class="tester-ctab" data-ctab="tyrax">TYRAX</button>
                 <button class="tester-ctab" data-ctab="form">Form</button>
                 <button class="tester-ctab" data-ctab="tabletab">Table</button>
+                <button class="tester-ctab" data-ctab="curlsaved">Saved</button>
             </div>
             <div id="curlRaw" class="tester-curl-panel active"></div>
             <div id="curlTyrax" class="tester-curl-panel"></div>
             <div id="curlForm" class="tester-curl-panel"></div>
             <div id="curlTable" class="tester-curl-panel"></div>
+            <div id="curlSaved1" class="tester-curl-panel"></div>
+            <div align="right" style="display: flex; gap:10px;justify-content:end;">
+            <button id="curlSave" class="tester-btn-small">Save curl</button>
             <button id="curlCopy" class="tester-btn-small">Copy to clipboard</button>
+            </div>
         </div>
     </aside>
 
