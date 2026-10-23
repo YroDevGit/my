@@ -13,7 +13,7 @@
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a href="#" class="logo">Code<span>tazer</span>-X</a>
+      <a href="#" class="logo"><img src="<?=assets('ctrx.png')?>" alt="ctrx" width="35" height="35">Code<span>tazer</span>-X</a>
       <nav class="header-nav">
         <a href="#what-is-ctrx">About</a>
         <a href="#requirements">Requirements</a>
@@ -42,11 +42,32 @@
       </div>
 
       <p>
-        CTRX Framework (Codetazer-X) is a lightweight, PHP-based framework designed for building web applications and REST APIs.
-        It provides developers with an organized structure and reusable tools for handling routes, controllers, middleware, database operations, validation, and other common web development tasks.
-        CTRX follows an API-first, JSON-first approach, while also supporting traditional PHP-rendered websites.
-        Its purpose is to help developers build applications more efficiently without having to create every component from scratch.
-        In simple terms, CTRX is a toolbox built with PHP that makes developing websites, APIs, and web applications easier and more organized.
+        CTRX (Codetazer-X) is a lightweight PHP framework for building web
+        applications and APIs. It gives you an organized project
+        structure and reusable tools for routing, controllers, middleware,
+        database operations, validation, and other common tasks, so you do
+        not have to build every component from scratch.
+      </p>
+
+      <p>
+        CTRX is API-first. Every backend endpoint returns JSON, and every
+        frontend page consumes those endpoints through TYRAX. The backend
+        lives in <code>app/</code>, the frontend lives in
+        <code>views/</code>, and the two halves never share a file. This
+        means backend and frontend developers can work independently
+        without merge conflicts. On the backend, CTRX ships with routing,
+        controllers, middleware, models, migrations, and validation. On the
+        frontend, it ships with TYRAX for requests, TModal for forms, TWal
+        for alerts, and a validator that renders errors under the right
+        inputs. It also supports traditional PHP-rendered pages, so the
+        framework fits both JSON APIs and server-rendered sites.
+      </p>
+
+      <p>
+        In short: CTRX is a PHP toolbox that makes building APIs, websites,
+        and web applications faster and more organized. It provides the API
+        layer, the UI layer, and the glue between them in one project,
+        without requiring extra installs.
       </p>
 
       <h3>Why CTRX?</h3>

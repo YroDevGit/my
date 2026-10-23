@@ -61,6 +61,8 @@ header.site-header {
     color: var(--text);
     text-decoration: none;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
 }
 
 .logo span {

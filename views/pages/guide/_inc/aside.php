@@ -6,7 +6,8 @@
             <h4>Getting Started</h4>
             <a href="index">Installation</a>
             <a href="workflow" class="<?=active_class('guide/workflow')?>">Workflow</a>
-            <a href="command" class="<?=active_class("/guide/command")?>">CLI</a>
+            <a href="cli" class="<?=active_class("/guide/cli")?>">CLI</a>
+            <a href="docker" class="<?=active_class("/guide/docker")?>">Docker</a>
             <a href="ai" class="<?=active_class("/guide/ai")?>">AI</a>
         </div>
 
