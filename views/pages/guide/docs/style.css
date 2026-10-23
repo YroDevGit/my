@@ -385,7 +385,7 @@ a:hover { color: var(--accent-dim); }
    ============================================================ */
 
 .docs-pager {
-    display: flex;
+    display: none;
     justify-content: space-between;
     margin-top: 4rem;
     padding-top: 2rem;

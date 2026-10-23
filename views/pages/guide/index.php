@@ -139,7 +139,7 @@
       <div class="callout">
         <p>
           <strong>Read the full story:</strong> the
-          <a href="workflow">Team Workflow</a>
+          <a href="/guide/workflow">Team Workflow</a>
           page explains why CTRX is shaped this way and walks through a
           real handoff between backend and frontend developers.
         </p>
@@ -507,7 +507,7 @@
       <span class="check">✓</span>
       <h3>You're ready to build with CTRX</h3>
       <p>Navigate into your new project folder and start your server. Full usage docs coming soon.</p>
-      <p>Next topic is: <a href="workflow">Workflows</a></p>
+      <p>Next topic is: <a href="/guide/workflow">Workflows</a></p>
     </div>
 
   </main>

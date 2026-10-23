@@ -34,6 +34,11 @@
         </div>
 
         <div class="sidebar-section">
+            <h4>Database</h4>
+            <a href="migration" class="<?=active_class("/guide/migration")?>">Migration</a>
+        </div>
+
+        <div class="sidebar-section">
             <h4>Tutorials</h4>
             <a href="../tutorials/login-flow.html">Login Flow</a>
             <a href="add" class="<?=active_class('guide/add')?>">Insert Data</a>
