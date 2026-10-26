@@ -11,6 +11,8 @@ define('_backend', '_backend');
 define('assets', '/views/assets');
 define('codepath', '/views/code');
 define("docroot", $_SERVER['DOCUMENT_ROOT'] ?? "");
+define('PAGEDIR_ROOT', FALSE);
+define('PAGEDIR_CURRENT', TRUE);
 
 define("DATE_FORMAT", "Y-m-d");
 define("DATETIME_FORMAT", "Y-m-d H:i:s");
@@ -477,19 +479,28 @@ if (! function_exists("has_internet_connection")) {
 }
 
 if(! function_exists("pagedir")){
-    function pagedir(string|null $file = null){
-        $fe = \Classes\Ctrx::_current_page();
-        $fe = trim($fe, " /\\");
-        $fkfile = "/views/pages/". $fe.".php";
-        $dir = dirname($fkfile);
+    function pagedir(string|null $file = null, bool|int $path = PAGEDIR_CURRENT){
+        $dir = "views/pages";
+        if($path){
+            $fe = \Classes\Ctrx::_current_page();
+            $fe = trim($fe, " /\\");
+            $fkfile = "/views/pages/". $fe.".php";
+            $dir = dirname($fkfile);
+        }
         if(! $file) return $dir;
         return $dir."/".$file;
     }
 }
 
+if(! function_exists("pagepath")){
+    function pagepath(string|null $file){
+        return pagedir($file, false);
+    }
+}
+
 if(! function_exists("pagedir_include")){
-    function pagedir_include($page){
-        $page = pagedir($page);
+    function pagedir_include($page, $path = PAGEDIR_CURRENT){
+        $page = pagedir($page, $path);
         $page = append_php($page);
         $page = trim($page, " /\\");
         include $page;
@@ -497,8 +508,8 @@ if(! function_exists("pagedir_include")){
 }
 
 if(! function_exists("pagedir_css")){
-    function pagedir_css(string $file){
-        $newfile = pagedir($file);
+    function pagedir_css(string $file, $path = PAGEDIR_CURRENT){
+        $newfile = pagedir($file, $path);
         if(! str_ends_with($newfile, ".css")){
             $newfile = $newfile.".css";
         }
@@ -507,8 +518,8 @@ if(! function_exists("pagedir_css")){
 }
 
 if(! function_exists("pagedir_js")){
-    function pagedir_js(string $file){
-        $newfile = pagedir($file);
+    function pagedir_js(string $file, $path = PAGEDIR_CURRENT){
+        $newfile = pagedir($file, $path);
         if(! str_ends_with($newfile, ".js")){
             $newfile = $newfile.".js";
         }
