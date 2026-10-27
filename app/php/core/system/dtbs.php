@@ -771,6 +771,292 @@ function getDBTimezone($pdo)
     }
 }
 
+function exportSchemaJSON($pdo, $singleTable = null)
+{
+    $tablesResult = getTables($pdo);
+    if (!$tablesResult['success']) {
+        return ['success' => false, 'message' => 'Failed to get tables'];
+    }
+
+    $allTables = $tablesResult['data'];
+    if ($singleTable && !in_array($singleTable, $allTables)) {
+        return ['success' => false, 'message' => 'Table not found'];
+    }
+
+    $tablesToExport = $singleTable ? [$singleTable] : $allTables;
+
+    $snapshot = [
+        'meta' => [
+            'database'    => DB_NAME,
+            'driver'      => $GLOBALS['driver'],
+            'exported_at' => date('Y-m-d H:i:s'),
+            'version'     => 1
+        ],
+        'tables' => []
+    ];
+
+    foreach ($tablesToExport as $table) {
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        $info = getTableInfo($pdo, $table);
+        if (!$info['success']) continue;
+
+        $columns = [];
+        foreach ($info['data']['columns'] as $col) {
+            $columns[$col['Field']] = [
+                'type'     => $col['Type'],
+                'nullable' => ($col['Null'] === 'YES'),
+                'default'  => $col['Default'],
+                'extra'    => $col['Extra'] ?? ''
+            ];
+        }
+
+        $snapshot['tables'][$table] = [
+            'columns'     => $columns,
+            'primary_key' => $info['data']['keys']['PRIMARY'] ?? []
+        ];
+    }
+
+    return ['success' => true, 'json' => $snapshot];
+}
+
+function getLiveSchemaCanonical($pdo)
+{
+    $tablesResult = getTables($pdo);
+    if (!$tablesResult['success']) {
+        return ['success' => false, 'message' => 'Failed to get tables'];
+    }
+
+    $live = ['tables' => []];
+    foreach ($tablesResult['data'] as $table) {
+        $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        $info = getTableInfo($pdo, $table);
+        if (!$info['success']) continue;
+
+        $columns = [];
+        foreach ($info['data']['columns'] as $col) {
+            $columns[$col['Field']] = [
+                'type'     => $col['Type'],
+                'nullable' => ($col['Null'] === 'YES'),
+                'default'  => $col['Default'],
+                'extra'    => $col['Extra'] ?? ''
+            ];
+        }
+
+        $live['tables'][$table] = [
+            'columns'     => $columns,
+            'primary_key' => $info['data']['keys']['PRIMARY'] ?? []
+        ];
+    }
+
+    return ['success' => true, 'schema' => $live];
+}
+
+function normalizeColumnForCompare($col)
+{
+    $type    = strtolower(trim((string)($col['type'] ?? '')));
+    $nullable= !empty($col['nullable']);
+    $default = $col['default'];
+    if ($default === null) {
+        $defaultNorm = '__NULL__';
+    } else {
+        $defaultNorm = strtolower(trim((string)$default));
+    }
+    $extra = strtolower(trim((string)($col['extra'] ?? '')));
+    return [
+        'type'     => $type,
+        'nullable' => $nullable,
+        'default'  => $defaultNorm,
+        'extra'    => $extra
+    ];
+}
+
+function columnsMatch($a, $b)
+{
+    $na = normalizeColumnForCompare($a);
+    $nb = normalizeColumnForCompare($b);
+    return $na['type'] === $nb['type']
+        && $na['nullable'] === $nb['nullable']
+        && $na['default'] === $nb['default']
+        && $na['extra'] === $nb['extra'];
+}
+
+function renderColumnDefinition($name, $col)
+{
+    $qname = quoteIdentifier($name);
+    $type  = $col['type'];
+
+    $def = "$qname $type";
+
+    if (empty($col['nullable'])) {
+        $def .= " NOT NULL";
+    }
+
+    if ($col['default'] !== null && $col['default'] !== '') {
+        $defaultVal = $col['default'];
+        $lower = strtolower((string)$defaultVal);
+
+        if ($lower === 'current_timestamp' || $lower === 'now()' || $lower === 'current_timestamp()') {
+            $def .= " DEFAULT CURRENT_TIMESTAMP";
+        } elseif (preg_match('/^(int|tinyint|smallint|mediumint|bigint|decimal|float|double|bit|serial)/i', $type)) {
+            $def .= " DEFAULT " . $defaultVal;
+        } elseif ($lower === 'null') {
+            $def .= " DEFAULT NULL";
+        } else {
+            $def .= " DEFAULT " . var_export((string)$defaultVal, true);
+        }
+    }
+
+    if (!empty($col['extra'])) {
+        $extra = strtolower($col['extra']);
+        if (strpos($extra, 'auto_increment') !== false) {
+            $def .= " AUTO_INCREMENT";
+        }
+        if (strpos($extra, 'on update current_timestamp') !== false) {
+            $def .= " ON UPDATE CURRENT_TIMESTAMP";
+        }
+    }
+
+    return $def;
+}
+
+function buildMigrationPlan($sourceJson, $liveSchema)
+{
+    $plan = [
+        'tables_to_create'   => [],
+        'columns_to_add'     => [],
+        'columns_to_modify'  => [],
+        'columns_unchanged'  => 0,
+        'orphaned_columns'   => [],
+        'orphaned_tables'    => [],
+        'warnings'           => []
+    ];
+
+    $sourceTables = $sourceJson['tables'] ?? [];
+    $liveTables   = $liveSchema['tables'] ?? [];
+
+    foreach ($sourceTables as $table => $srcTable) {
+        if (!isset($liveTables[$table])) {
+            $plan['tables_to_create'][$table] = $srcTable;
+            continue;
+        }
+
+        $srcCols  = $srcTable['columns'] ?? [];
+        $liveCols = $liveTables[$table]['columns'] ?? [];
+
+        foreach ($srcCols as $colName => $srcCol) {
+            if (!isset($liveCols[$colName])) {
+                $plan['columns_to_add'][] = [
+                    'table'  => $table,
+                    'column' => $colName,
+                    'definition' => renderColumnDefinition($colName, $srcCol)
+                ];
+            } else {
+                $liveCol = $liveCols[$colName];
+                if (!columnsMatch($srcCol, $liveCol)) {
+                    $plan['columns_to_modify'][] = [
+                        'table'    => $table,
+                        'column'   => $colName,
+                        'from'     => $liveCol,
+                        'to'       => $srcCol,
+                        'definition' => renderColumnDefinition($colName, $srcCol)
+                    ];
+
+                    $srcNorm  = normalizeColumnForCompare($srcCol);
+                    $liveNorm = normalizeColumnForCompare($liveCol);
+                    if (preg_match('/varchar\((\d+)\)/i', $liveNorm['type'], $m1)
+                        && preg_match('/varchar\((\d+)\)/i', $srcNorm['type'], $m2)) {
+                        if ((int)$m2[1] < (int)$m1[1]) {
+                            $plan['warnings'][] = "Column `$table`.`$colName` is being shrunk from {$liveNorm['type']} to {$srcNorm['type']} — existing data may be truncated.";
+                        }
+                    }
+                } else {
+                    $plan['columns_unchanged']++;
+                }
+            }
+        }
+
+        foreach ($liveCols as $liveColName => $liveCol) {
+            if (!isset($srcCols[$liveColName])) {
+                $plan['orphaned_columns'][] = [
+                    'table'  => $table,
+                    'column' => $liveColName
+                ];
+            }
+        }
+    }
+
+    foreach ($liveTables as $liveTableName => $liveTable) {
+        if (!isset($sourceTables[$liveTableName])) {
+            $plan['orphaned_tables'][] = $liveTableName;
+        }
+    }
+
+    return $plan;
+}
+
+function applyMigrationPlan($pdo, $plan)
+{
+    $executed = 0;
+    $errors   = [];
+
+    foreach ($plan['tables_to_create'] as $table => $srcTable) {
+        $colDefs = [];
+        foreach ($srcTable['columns'] as $colName => $col) {
+            $colDefs[] = renderColumnDefinition($colName, $col);
+        }
+        if (!empty($srcTable['primary_key'])) {
+            $pkCols = array_map('quoteIdentifier', $srcTable['primary_key']);
+            $colDefs[] = "PRIMARY KEY (" . implode(', ', $pkCols) . ")";
+        }
+        $qTable = quoteIdentifier($table);
+        $sql = "CREATE TABLE IF NOT EXISTS $qTable (\n  " . implode(",\n  ", $colDefs) . "\n)";
+        $res = executeQuery($pdo, $sql);
+        if ($res['success']) {
+            $executed++;
+        } else {
+            $errors[] = "CREATE TABLE `$table` failed: " . ($res['message'] ?? 'unknown');
+        }
+    }
+
+    foreach ($plan['columns_to_add'] as $change) {
+        $qTable = quoteIdentifier($change['table']);
+        $qCol   = quoteIdentifier($change['column']);
+        $sql = "ALTER TABLE $qTable ADD COLUMN $qCol " . $change['definition'];
+        $res = executeQuery($pdo, $sql);
+        if ($res['success']) {
+            $executed++;
+        } else {
+            $errors[] = "ADD COLUMN `{$change['table']}`.`{$change['column']}` failed: " . ($res['message'] ?? 'unknown');
+        }
+    }
+
+    foreach ($plan['columns_to_modify'] as $change) {
+        $qTable = quoteIdentifier($change['table']);
+        $qCol   = quoteIdentifier($change['column']);
+        if (isMysql()) {
+            $sql = "ALTER TABLE $qTable MODIFY COLUMN $qCol " . $change['definition'];
+            $res = executeQuery($pdo, $sql);
+        } elseif (isPostgres()) {
+            $typeOnly = $change['to']['type'];
+            $sql = "ALTER TABLE $qTable ALTER COLUMN $qCol TYPE $typeOnly";
+            $res = executeQuery($pdo, $sql);
+        } else {
+            $res = ['success' => false, 'message' => 'SQLite does not support MODIFY COLUMN.'];
+        }
+        if ($res['success']) {
+            $executed++;
+        } else {
+            $errors[] = "MODIFY COLUMN `{$change['table']}`.`{$change['column']}` failed: " . ($res['message'] ?? 'unknown');
+        }
+    }
+
+    return [
+        'success'      => empty($errors),
+        'executed'     => $executed,
+        'errors'       => $errors
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     $pdo = getDBConnection($driver, $host, $port, $dbname, DB_CHARSET);
     $action = $_POST['action'];
@@ -878,6 +1164,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             case 'getCreateTableSQL':
                 $response = getCreateTableSQL($pdo, $_POST['table'] ?? '');
                 break;
+            case 'migrationExport':
+                $singleTable = $_POST['single_table'] ?? null;
+                if ($singleTable === '') $singleTable = null;
+                $response = exportSchemaJSON($pdo, $singleTable);
+                break;
+
+            case 'migrationPreview':
+                $jsonRaw = $_POST['migration_json'] ?? '';
+                $parsed = json_decode($jsonRaw, true);
+                if (!is_array($parsed) || !isset($parsed['tables'])) {
+                    $response = ['success' => false, 'message' => 'Invalid migration JSON'];
+                    break;
+                }
+                $liveRes = getLiveSchemaCanonical($pdo);
+                if (!$liveRes['success']) {
+                    $response = $liveRes;
+                    break;
+                }
+                $plan = buildMigrationPlan($parsed, $liveRes['schema']);
+                $response = ['success' => true, 'plan' => $plan];
+                break;
+
+            case 'migrationApply':
+                $jsonRaw = $_POST['migration_json'] ?? '';
+                $parsed = json_decode($jsonRaw, true);
+                if (!is_array($parsed) || !isset($parsed['tables'])) {
+                    $response = ['success' => false, 'message' => 'Invalid migration JSON'];
+                    break;
+                }
+                $liveRes = getLiveSchemaCanonical($pdo);
+                if (!$liveRes['success']) {
+                    $response = $liveRes;
+                    break;
+                }
+                $plan = buildMigrationPlan($parsed, $liveRes['schema']);
+                $apply = applyMigrationPlan($pdo, $plan);
+                $response = [
+                    'success'  => $apply['success'],
+                    'executed' => $apply['executed'],
+                    'errors'   => $apply['errors'],
+                    'message'  => $apply['success']
+                        ? "Migration applied. {$apply['executed']} statement(s) executed."
+                        : "Migration finished with errors."
+                ];
+                break;
         }
     } catch (Exception $e) {
         $response = ['success' => false, 'message' => $e->getMessage()];
@@ -896,6 +1227,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($action === 'migrationExport' && $response['success']) {
+        header('Content-Type: application/json');
+        $filename = DB_NAME . '_migration_' . date('Y-m-d_H-i-s') . '.json';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        echo json_encode($response['json'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     echo json_encode($response);
     exit;
 }
@@ -908,1181 +1249,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Manager - <?= $dbname ?></title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f0f2f5;
-            padding: 20px;
-            color: #333;
-        }
-
-        a {
-            color: #0d6efd;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .col-md-3 {
-            flex: 0 0 calc(25% - 15px);
-            min-width: 250px;
-        }
-
-        .col-md-9 {
-            flex: 1;
-            min-width: 300px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-            background: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-        }
-
-        .db-header {
-            border-left: 4px solid #0d6efd;
-            padding-left: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .db-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .db-header h2 .text-primary {
-            color: #0d6efd;
-        }
-
-        .db-header small {
-            color: #6c757d;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 6px 12px;
-            font-size: 14px;
-            font-weight: 500;
-            text-align: center;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.15s;
-            line-height: 1.5;
-        }
-
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .btn-primary {
-            background: #0d6efd;
-            color: white;
-            border-color: #0d6efd;
-        }
-
-        .btn-primary:hover {
-            background: #0b5ed7;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            border-color: #6c757d;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .btn-success {
-            background: #198754;
-            color: white;
-            border-color: #198754;
-        }
-
-        .btn-success:hover {
-            background: #157347;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
-        }
-
-        .btn-danger:hover {
-            background: #bb2d3b;
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-            border-color: #ffc107;
-        }
-
-        .btn-warning:hover {
-            background: #ffca2c;
-        }
-
-        .btn-info {
-            background: #0dcaf0;
-            color: #212529;
-            border-color: #0dcaf0;
-        }
-
-        .btn-info:hover {
-            background: #31d2f2;
-        }
-
-        .btn-outline-primary {
-            background: transparent;
-            color: #0d6efd;
-            border-color: #0d6efd;
-        }
-
-        .btn-outline-primary:hover {
-            background: #0d6efd;
-            color: white;
-        }
-
-        .btn-outline-secondary {
-            background: transparent;
-            color: #6c757d;
-            border-color: #6c757d;
-        }
-
-        .btn-outline-secondary:hover {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-outline-danger {
-            background: transparent;
-            color: #dc3545;
-            border-color: #dc3545;
-        }
-
-        .btn-outline-danger:hover {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-outline-warning {
-            background: transparent;
-            color: #ffc107;
-            border-color: #ffc107;
-        }
-
-        .btn-outline-warning:hover {
-            background: #ffc107;
-            color: #212529;
-        }
-
-        .btn-outline-info {
-            background: transparent;
-            color: #0dcaf0;
-            border-color: #0dcaf0;
-        }
-
-        .btn-outline-info:hover {
-            background: #0dcaf0;
-            color: #212529;
-        }
-
-        .w-100 {
-            width: 100%;
-        }
-
-        .mt-2 {
-            margin-top: 10px;
-        }
-
-        .mb-0 {
-            margin-bottom: 0;
-        }
-
-        .mb-2 {
-            margin-bottom: 10px;
-        }
-
-        .mb-3 {
-            margin-bottom: 15px;
-        }
-
-        .mb-4 {
-            margin-bottom: 20px;
-        }
-
-        .mt-3 {
-            margin-top: 15px;
-        }
-
-        .mt-4 {
-            margin-top: 20px;
-        }
-
-        .me-2 {
-            margin-right: 10px;
-        }
-
-        .me-1 {
-            margin-right: 5px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .card-header h5 {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .sidebar {
-            min-height: 500px;
-        }
-
-        .sidebar .card-header {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .table-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .table-list-item {
-            display: block;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .table-list-item:hover {
-            background: #f0f2f5;
-        }
-
-        .table-list-item.active {
-            background: #0d6efd;
-            color: white;
-        }
-
-        .table-list-item .badge {
-            float: right;
-            background: #6c757d;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-        }
-
-        .table-list-item.active .badge {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        table th {
-            background: #f8f9fa;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            padding: 8px 10px;
-            text-align: left;
-            border: 1px solid #dee2e6;
-            font-weight: 600;
-        }
-
-        table td {
-            padding: 6px 10px;
-            border: 1px solid #dee2e6;
-        }
-
-        table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        table tbody tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        table tbody tr:nth-child(even):hover {
-            background: #e9ecef;
-        }
-
-        .badge-key {
-            display: inline-block;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: 700;
-            border-radius: 3px;
-            margin-left: 4px;
-        }
-
-        .badge-key.bg-primary {
-            background: #0d6efd;
-            color: white;
-        }
-
-        .badge-key.bg-info {
-            background: #0dcaf0;
-            color: #212529;
-        }
-
-        .badge-key.bg-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .text-muted {
-            color: #6c757d;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-danger {
-            color: #dc3545;
-        }
-
-        .py-3 {
-            padding-top: 15px;
-            padding-bottom: 15px;
-        }
-
-        .py-5 {
-            padding-top: 40px;
-            padding-bottom: 40px;
-        }
-
-        .display-4 {
-            font-size: 48px;
-            font-weight: 300;
-        }
-
-        .d-block {
-            display: block;
-        }
-
-        .alert {
-            padding: 12px 20px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            border: 1px solid transparent;
-        }
-
-        .alert-success {
-            background: #d1e7dd;
-            border-color: #badbcc;
-            color: #0f5132;
-        }
-
-        .alert-danger {
-            background: #f8d7da;
-            border-color: #f5c2c7;
-            color: #842029;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            border-color: #ffecb5;
-            color: #664d03;
-        }
-
-        .alert-info {
-            background: #cff4fc;
-            border-color: #b6effb;
-            color: #055160;
-        }
-
-        .alert-dismissible {
-            position: relative;
-            padding-right: 40px;
-        }
-
-        .alert-dismissible .btn-close {
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: inherit;
-            opacity: 0.6;
-        }
-
-        .alert-dismissible .btn-close:hover {
-            opacity: 1;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal {
-            background: white;
-            border-radius: 8px;
-            max-width: 700px;
-            width: 95%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-lg {
-            max-width: 800px;
-        }
-
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 10;
-        }
-
-        .modal-header h5 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .modal-header .btn-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            opacity: 0.6;
-            padding: 0 8px;
-        }
-
-        .modal-header .btn-close:hover {
-            opacity: 1;
-        }
-
-        .modal-body {
-            display: grid;
-            padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        .modal-footer {
-            padding: 15px 20px;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            position: sticky;
-            bottom: 0;
-            background: white;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .form-control {
-            display: block;
-            width: 100%;
-            padding: 8px 12px;
-            font-size: 14px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            transition: border-color 0.15s;
-        }
-
-        .form-control:focus {
-            border-color: #0d6efd;
-            outline: 0;
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
-        }
-
-        textarea.form-control {
-            min-height: 100px;
-            font-family: monospace;
-            resize: vertical;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 5px;
-        }
-
-        .input-group .form-control {
-            flex: 1;
-        }
-
-        .input-group .btn {
-            flex-shrink: 0;
-        }
-
-        .checkbox-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 8px;
-            margin: 10px 0 15px 0;
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e9ecef;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            border-radius: 4px;
-            transition: background 0.15s;
-            cursor: pointer;
-        }
-
-        .checkbox-item:hover {
-            background: #e9ecef;
-        }
-
-        .checkbox-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: #0d6efd;
-        }
-
-        .checkbox-item label {
-            cursor: pointer;
-            font-size: 13px;
-            color: #333;
-            margin: 0;
-            flex: 1;
-        }
-
-        .checkbox-item .table-count {
-            font-size: 11px;
-            color: #6c757d;
-        }
-
-        .select-all-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            background: #e9ecef;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-
-        .select-all-container input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: #0d6efd;
-        }
-
-        .select-all-container label {
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 14px;
-            margin: 0;
-            color: #333;
-        }
-
-        .select-all-container .hint {
-            font-size: 12px;
-            color: #6c757d;
-            margin-left: auto;
-        }
-
-        .spinner-border {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner 0.75s linear infinite;
-        }
-
-        @keyframes spinner {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-
-        .btn-group .btn {
-            border-radius: 4px;
-        }
-
-        .flex-wrap {
-            flex-wrap: wrap;
-        }
-
-        .gap-2 {
-            gap: 8px;
-        }
-
-        .icon {
-            display: inline-block;
-            width: 16px;
-            text-align: center;
-            margin-right: 4px;
-        }
-
-        .export-sql-btn {
-            margin-left: 10px;
-        }
-
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            background: #f8f9fa;
-            padding: 10px 14px;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-
-        .filter-bar select,
-        .filter-bar input {
-            padding: 5px 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 13px;
-            background: white;
-        }
-
-        .filter-bar select {
-            min-width: 140px;
-        }
-
-        .filter-bar input {
-            min-width: 180px;
-        }
-
-        .filter-bar .btn {
-            padding: 4px 14px;
-        }
-
-        .filter-bar .filter-label {
-            font-weight: 500;
-            font-size: 13px;
-            color: #495057;
-            margin-right: 2px;
-        }
-
-        .import-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
-        }
-
-        .import-tab {
-            padding: 8px 20px;
-            border-radius: 6px 6px 0 0;
-            cursor: pointer;
-            font-weight: 500;
-            color: #6c757d;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .import-tab:hover {
-            background: #f0f2f5;
-        }
-
-        .import-tab.active {
-            color: #0d6efd;
-            border-bottom: 3px solid #0d6efd;
-            background: transparent;
-        }
-
-        .import-panel {
-            display: none;
-        }
-
-        .import-panel.active {
-            display: block;
-        }
-
-        .file-upload-area {
-            border: 2px dashed #ced4da;
-            border-radius: 8px;
-            padding: 30px 20px;
-            text-align: center;
-            transition: all 0.2s;
-            background: #fafbfc;
-        }
-
-        .file-upload-area:hover {
-            border-color: #0d6efd;
-            background: #f8f9fa;
-        }
-
-        .file-upload-area input[type="file"] {
-            display: none;
-        }
-
-        .file-upload-area .file-label {
-            cursor: pointer;
-            color: #0d6efd;
-            font-weight: 500;
-        }
-
-        .file-upload-area .file-label:hover {
-            text-decoration: underline;
-        }
-
-        .file-upload-area .file-info {
-            margin-top: 8px;
-            font-size: 13px;
-            color: #6c757d;
-        }
-
-        .file-upload-area .file-selected {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: #e9ecef;
-            border-radius: 4px;
-            font-size: 13px;
-            display: none;
-        }
-
-        .file-upload-area .file-selected.show {
-            display: block;
-        }
-
-        .field-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .field-row .form-label {
-            margin-bottom: 0;
-            min-width: 120px;
-            flex-shrink: 0;
-        }
-
-        .field-row .form-control {
-            flex: 1;
-        }
-
-        .field-row .skip-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            flex-shrink: 0;
-        }
-
-        .field-row .skip-checkbox input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #dc3545;
-            cursor: pointer;
-        }
-
-        .field-row .skip-checkbox label {
-            font-size: 12px;
-            color: #6c757d;
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .skip-checkbox.checked label {
-            color: #dc3545;
-            font-weight: 500;
-        }
-
-        .credential-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 12px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 14px;
-        }
-
-        .credential-item:last-child {
-            border-bottom: none;
-        }
-
-        .credential-item .label {
-            font-weight: 500;
-            color: #495057;
-        }
-
-        .credential-item .value {
-            color: #212529;
-            font-family: monospace;
-            background: #f8f9fa;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .eye-icon {
-            cursor: pointer;
-            font-size: 18px;
-            opacity: 0.6;
-            transition: opacity 0.15s;
-            background: none;
-            border: none;
-            padding: 0 4px;
-        }
-
-        .eye-icon:hover {
-            opacity: 1;
-        }
-
-        .pagination-bar {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-top: 1px solid #e9ecef;
-            margin-top: 10px;
-        }
-
-        .pagination-bar .info {
-            font-size: 13px;
-            color: #6c757d;
-        }
-
-        .credential-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 14px;
-        }
-
-        .credential-item:last-child {
-            border-bottom: none;
-        }
-
-        .credential-item .label {
-            font-weight: 500;
-            color: #495057;
-            min-width: 150px;
-        }
-
-        .credential-item .value {
-            color: #212529;
-            font-family: monospace;
-            background: #f8f9fa;
-            padding: 2px 8px;
-            border-radius: 4px;
-            flex: 1;
-            margin: 0 10px;
-        }
-
-        .credential-item .copy-btn {
-            padding: 2px 8px;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .query-result-container {
-            margin-top: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e9ecef;
-            max-height: 300px;
-            overflow: auto;
-            display: none;
-        }
-
-        .query-result-container.show {
-            display: block;
-        }
-
-        .query-result-container table {
-            font-size: 12px;
-        }
-
-        .query-result-container table th,
-        .query-result-container table td {
-            padding: 4px 8px;
-        }
-
-        .query-result-stats {
-            font-size: 13px;
-            color: #6c757d;
-            margin-bottom: 8px;
-        }
-
-        .query-result-error {
-            color: #dc3545;
-            font-weight: 500;
-        }
-
-        .query-wrapper {
-            background: white;
-            padding: 10px;
-            margin-bottom: 5px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-        }
-
-        .query-wrapper .input-group {
-            display: flex;
-            gap: 10px;
-            align-items: stretch;
-        }
-
-        .query-wrapper .input-group .form-control {
-            flex: 1;
-            min-height: 80px;
-            font-family: monospace;
-            resize: vertical;
-        }
-
-        .query-wrapper .input-group .btn {
-            flex-shrink: 0;
-            height: 80px;
-            align-self: stretch;
-        }
-
-        .timezone-display {
-            font-size: 14px;
-            color: #6c757d;
-            margin-left: 10px;
-            background: #f8f9fa;
-            padding: 2px 10px;
-            border-radius: 4px;
-            border: 1px solid #e9ecef;
-        }
-
-        .sql-code-block {
-            background: #1e1e1e;
-            color: #0bff00;
-            padding: 15px;
-            border-radius: 6px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            max-height: 400px;
-            overflow-y: auto;
-            margin: 10px 0;
-            border: 1px solid #333;
-        }
-
-        .sql-code-block .keyword {
-            color: #569cd6;
-        }
-        .sql-code-block .string {
-            color: #ce9178;
-        }
-        .sql-code-block .comment {
-            color: #6a9955;
-        }
-        .sql-code-block .function {
-            color: #dcdcaa;
-        }
-        .sql-code-block .variable {
-            color: #9cdcfe;
-        }
-        .sql-code-block .operator {
-            color: #d4d4d4;
-        }
-        .sql-code-block .number {
-            color: #b5cea8;
-        }
-
-        @media (max-width: 768px) {
-            .db-header-actions {
-                display: grid;
-                gap: 2px;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-                align-items: center;
-                width: 100%;
-            }
-
-            .db-header-actions button {
-                width: 100%;
-            }
-
-            .col-md-3,
-            .col-md-9 {
-                flex: 0 0 100%;
-                min-width: 0;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .btn-group .btn {
-                font-size: 11px;
-                padding: 3px 6px;
-            }
-
-            table {
-                font-size: 12px;
-            }
-
-            table th,
-            table td {
-                padding: 4px 6px;
-            }
-
-            .export-sql-btn {
-                margin-left: 0;
-            }
-
-            .checkbox-list {
-                grid-template-columns: 1fr;
-                max-height: 200px;
-            }
-
-            .filter-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .filter-bar select,
-            .filter-bar input {
-                min-width: auto;
-                width: 100%;
-            }
-
-            .import-tabs {
-                flex-wrap: wrap;
-            }
-
-            .import-tab {
-                flex: 1;
-                text-align: center;
-                font-size: 13px;
-                padding: 6px 10px;
-            }
-
-            .field-row {
-                flex-wrap: wrap;
-            }
-
-            .field-row .form-label {
-                min-width: 100%;
-            }
-
-            .field-row .skip-checkbox {
-                margin-left: auto;
-            }
-
-            .db-header {
-                flex-wrap: wrap;
-            }
-
-            .query-wrapper .input-group {
-                flex-direction: column;
-            }
-
-            .query-wrapper .input-group .btn {
-                height: auto;
-                align-self: flex-end;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/views/code/src/style/dtbs.css">
 </head>
 
 <body>
@@ -2103,6 +1270,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 </button>
                 <button class="btn btn-info btn-sm" onclick="showImportModal()">
                     <span class="icon">📥</span> Import SQL
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="showMigrationModal()">
+                    <span class="icon">🧬</span> Migration
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="refreshAll()">
                     <span class="icon">🔄</span> Refresh
@@ -2309,6 +1479,83 @@ INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
                 <button class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="importSQL()">
                     <span class="icon">▶️</span> Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="migrationModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h5><span class="icon">🧬</span>Migration (Tables &amp; Columns)</h5>
+                <button class="btn-close" onclick="closeModal('migrationModal')">×</button>
+            </div>
+            <div class="modal-body" style="display:block;">
+
+                <div class="import-tabs">
+                    <div class="import-tab active" data-tab="export" onclick="switchMigrationTab('export')">📤 Export JSON</div>
+                    <div class="import-tab" data-tab="import" onclick="switchMigrationTab('import')">📥 Import JSON</div>
+                </div>
+
+                <div class="import-panel active" id="migrationPanelExport">
+                    <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                        Export a JSON snapshot of <strong>tables and columns only</strong>.
+                        No data is included. Use this file to migrate structure to another environment.
+                    </p>
+
+                    <div class="select-all-container">
+                        <input type="checkbox" id="selectAllMigrationTables" onchange="toggleAllMigrationTables()">
+                        <label for="selectAllMigrationTables">Select All Tables</label>
+                        <span class="hint">Empty selection = export all tables</span>
+                    </div>
+
+                    <div id="migrationTableCheckboxList" class="checkbox-list"></div>
+
+                    <div style="margin-top: 10px; font-size: 13px; color: #6c757d;">
+                        <span id="migrationSelectedCount">0</span> tables selected
+                    </div>
+                </div>
+
+                <div class="import-panel" id="migrationPanelImport">
+                    <p style="margin-bottom: 12px; color: #6c757d; font-size: 14px;">
+                        Upload a migration JSON file. CTR-X will compare it against the live database
+                        and show only the changes (new tables, new columns, modified columns).
+                        No data is touched, and nothing is ever dropped automatically.
+                    </p>
+
+                    <div class="file-upload-area" id="migrationDropArea">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🧬</div>
+                        <p>
+                            <span class="file-label" onclick="document.getElementById('migrationFileInput').click()">
+                                Click to select a migration JSON file
+                            </span>
+                            or drag and drop here
+                        </p>
+                        <input type="file" id="migrationFileInput" accept=".json" onchange="handleMigrationFileSelect(event)">
+                        <div class="file-info">Supported: .json</div>
+                        <div class="file-selected" id="migrationFileSelectedInfo">
+                            📎 Selected: <span id="migrationSelectedFileName"></span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px; font-size: 13px; color: #6c757d;">
+                        <span id="migrationFileStatus">No file selected</span>
+                    </div>
+
+                    <div id="migrationPreviewContainer" style="margin-top: 15px;"></div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('migrationModal')">Close</button>
+                <button class="btn btn-success" id="migrationExportBtn" onclick="migrationExportJSON()">
+                    <span class="icon">📤</span> Export JSON
+                </button>
+                <button class="btn btn-primary" id="migrationPreviewBtn" style="display:none;" onclick="migrationPreview()">
+                    <span class="icon">🔍</span> Preview Changes
+                </button>
+                <button class="btn btn-warning" id="migrationApplyBtn" style="display:none;" onclick="migrationApply()">
+                    <span class="icon">▶️</span> Apply Migration
                 </button>
             </div>
         </div>
@@ -2575,6 +1822,10 @@ INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
         const dataLimit = 100;
         let filteredData = [];
 
+        let migrationFileText = null;
+        let migrationFileName = null;
+        let migrationCurrentTab = 'export';
+
         function openModal(id) {
             document.getElementById(id).classList.add('show');
         }
@@ -2644,6 +1895,26 @@ INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
                     return {
                         success: true,
                         message: 'SQL export started'
+                    };
+                }
+
+                if (contentType && contentType.includes('application/json') && response.headers.get('Content-Disposition')) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const disposition = response.headers.get('Content-Disposition');
+                    let filename = 'migration.json';
+                    const match = disposition.match(/filename="?([^";]+)"?/);
+                    if (match) filename = match[1];
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    return {
+                        success: true,
+                        message: 'Migration JSON export started'
                     };
                 }
 
@@ -2801,6 +2072,45 @@ INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
                     executeCustomQuery();
                 }
             });
+
+            const mDrop = document.getElementById('migrationDropArea');
+            if (mDrop) {
+                mDrop.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#0d6efd';
+                    this.style.background = '#e9ecef';
+                });
+                mDrop.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#ced4da';
+                    this.style.background = '#fafbfc';
+                });
+                mDrop.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.style.borderColor = '#ced4da';
+                    this.style.background = '#fafbfc';
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.name.endsWith('.json')) {
+                            const reader = new FileReader();
+                            reader.onload = function(ev) {
+                                migrationFileText = ev.target.result;
+                                migrationFileName = file.name;
+                                document.getElementById('migrationSelectedFileName').textContent =
+                                    file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                                document.getElementById('migrationFileSelectedInfo').classList.add('show');
+                                document.getElementById('migrationFileStatus').textContent =
+                                    '✅ File selected: ' + file.name;
+                                document.getElementById('migrationPreviewBtn').style.display = '';
+                            };
+                            reader.readAsText(file);
+                        } else {
+                            showAlert('Please select a .json file', 'warning');
+                        }
+                    }
+                });
+            }
         });
 
         async function loadTimezone() {
@@ -4000,7 +3310,296 @@ INSERT IGNORE INTO users (id, name) VALUES (1, 'John');"></textarea>
                 showAlert('Failed to connect to database: ' + error.message, 'danger');
             }
         });
+
+        function showMigrationModal() {
+            migrationFileText = null;
+            migrationFileName = null;
+            document.getElementById('migrationFileInput').value = '';
+            document.getElementById('migrationFileSelectedInfo').classList.remove('show');
+            document.getElementById('migrationSelectedFileName').textContent = '';
+            document.getElementById('migrationFileStatus').textContent = 'No file selected';
+            document.getElementById('migrationPreviewContainer').innerHTML = '';
+            document.getElementById('migrationPreviewBtn').style.display = 'none';
+            document.getElementById('migrationApplyBtn').style.display = 'none';
+            switchMigrationTab('export');
+            loadMigrationTableCheckboxes();
+            openModal('migrationModal');
+        }
+
+        function switchMigrationTab(tab) {
+            migrationCurrentTab = tab;
+            document.querySelectorAll('#migrationModal .import-tab').forEach(el => el.classList.remove('active'));
+            document.querySelector(`#migrationModal .import-tab[data-tab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('#migrationModal .import-panel').forEach(el => el.classList.remove('active'));
+            if (tab === 'export') {
+                document.getElementById('migrationPanelExport').classList.add('active');
+                document.getElementById('migrationExportBtn').style.display = '';
+                document.getElementById('migrationPreviewBtn').style.display = 'none';
+                document.getElementById('migrationApplyBtn').style.display = 'none';
+            } else {
+                document.getElementById('migrationPanelImport').classList.add('active');
+                document.getElementById('migrationExportBtn').style.display = 'none';
+                document.getElementById('migrationPreviewBtn').style.display = migrationFileText ? '' : 'none';
+                document.getElementById('migrationApplyBtn').style.display = 'none';
+            }
+        }
+
+        async function loadMigrationTableCheckboxes() {
+            if (allTableNames.length === 0) {
+                const result = await apiRequest('getTables');
+                if (result.success && result.data) {
+                    allTableNames = result.data;
+                }
+            }
+
+            const container = document.getElementById('migrationTableCheckboxList');
+            if (!allTableNames.length) {
+                container.innerHTML = '<div class="text-muted text-center">No tables found</div>';
+                document.getElementById('migrationSelectedCount').textContent = '0';
+                return;
+            }
+
+            document.getElementById('selectAllMigrationTables').checked = false;
+            container.innerHTML = allTableNames.map(table => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="mtable_${table}" value="${table}" onchange="updateMigrationSelectedCount()">
+                    <label for="mtable_${table}">${table}</label>
+                </div>
+            `).join('');
+            updateMigrationSelectedCount();
+        }
+
+        function toggleAllMigrationTables() {
+            const checked = document.getElementById('selectAllMigrationTables').checked;
+            document.querySelectorAll('#migrationTableCheckboxList input[type="checkbox"]').forEach(cb => {
+                cb.checked = checked;
+            });
+            updateMigrationSelectedCount();
+        }
+
+        function updateMigrationSelectedCount() {
+            const checked = document.querySelectorAll('#migrationTableCheckboxList input[type="checkbox"]:checked').length;
+            document.getElementById('migrationSelectedCount').textContent = checked;
+        }
+
+        async function migrationExportJSON() {
+            const selected = [];
+            document.querySelectorAll('#migrationTableCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+                selected.push(cb.value);
+            });
+
+            const btn = document.getElementById('migrationExportBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Exporting...';
+            btn.disabled = true;
+
+            try {
+                const payload = {};
+                if (selected.length === 1) {
+                    payload.single_table = selected[0];
+                }
+                const result = await apiRequest('migrationExport', payload);
+                if (result.success) {
+                    showAlert('Migration JSON export started', 'success');
+                }
+            } catch (error) {
+                showAlert('Migration export failed: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function handleMigrationFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.name.endsWith('.json')) {
+                showAlert('Please select a .json file', 'warning');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                migrationFileText = ev.target.result;
+                migrationFileName = file.name;
+                document.getElementById('migrationSelectedFileName').textContent =
+                    file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                document.getElementById('migrationFileSelectedInfo').classList.add('show');
+                document.getElementById('migrationFileStatus').textContent = '✅ File selected: ' + file.name;
+                document.getElementById('migrationPreviewBtn').style.display = '';
+                document.getElementById('migrationApplyBtn').style.display = 'none';
+                document.getElementById('migrationPreviewContainer').innerHTML = '';
+            };
+            reader.readAsText(file);
+        }
+
+        async function migrationPreview() {
+            if (!migrationFileText) {
+                showAlert('Please select a migration JSON file first', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('migrationPreviewBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Analyzing...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiRequest('migrationPreview', {
+                    migration_json: migrationFileText
+                });
+
+                if (!result.success) {
+                    showAlert(result.message || 'Preview failed', 'danger');
+                    return;
+                }
+
+                renderMigrationPlan(result.plan);
+                document.getElementById('migrationApplyBtn').style.display = '';
+            } catch (error) {
+                showAlert('Preview error: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function renderMigrationPlan(plan) {
+            const container = document.getElementById('migrationPreviewContainer');
+
+            const createCount = Object.keys(plan.tables_to_create || {}).length;
+            const addCount    = (plan.columns_to_add || []).length;
+            const modCount    = (plan.columns_to_modify || []).length;
+            const unchanged   = plan.columns_unchanged || 0;
+            const orphanCols  = (plan.orphaned_columns || []).length;
+            const orphanTbls  = (plan.orphaned_tables || []).length;
+
+            let html = `<div class="migration-summary">
+                <div class="migration-stat add">
+                    <div class="num">${createCount}</div>
+                    <div class="lbl">New Tables</div>
+                </div>
+                <div class="migration-stat add">
+                    <div class="num">${addCount}</div>
+                    <div class="lbl">New Columns</div>
+                </div>
+                <div class="migration-stat mod">
+                    <div class="num">${modCount}</div>
+                    <div class="lbl">Modified Columns</div>
+                </div>
+                <div class="migration-stat ok">
+                    <div class="num">${unchanged}</div>
+                    <div class="lbl">Unchanged</div>
+                </div>
+                <div class="migration-stat orphan">
+                    <div class="num">${orphanCols + orphanTbls}</div>
+                    <div class="lbl">Orphaned (not dropped)</div>
+                </div>
+            </div>`;
+
+            if ((plan.warnings || []).length) {
+                html += `<div class="alert alert-warning" style="font-size:13px;">`;
+                html += `<strong>⚠️ Warnings:</strong><ul style="margin:6px 0 0 18px;">`;
+                plan.warnings.forEach(w => {
+                    html += `<li>${w}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            if (createCount === 0 && addCount === 0 && modCount === 0) {
+                html += `<div class="alert alert-success" style="font-size:13px;">
+                    ✅ No changes needed. The target database already matches the snapshot.
+                </div>`;
+            }
+
+            if (createCount) {
+                html += `<div class="migration-section-title">➕ Tables to CREATE</div>`;
+                Object.keys(plan.tables_to_create).forEach(t => {
+                    const cols = Object.keys(plan.tables_to_create[t].columns || {});
+                    html += `<div class="migration-code">CREATE TABLE <span class="tbl">\`${t}\`</span> (<br>`;
+                    cols.forEach(c => {
+                        html += `&nbsp;&nbsp;<span class="col">\`${c}\`</span> ${plan.tables_to_create[t].columns[c].type},<br>`;
+                    });
+                    html += `);</div>`;
+                });
+            }
+
+            if (addCount) {
+                html += `<div class="migration-section-title">➕ Columns to ADD</div>`;
+                plan.columns_to_add.forEach(c => {
+                    html += `<div class="migration-code"><span class="kw">ALTER TABLE</span> <span class="tbl">\`${c.table}\`</span> <span class="kw">ADD COLUMN</span> <span class="col">\`${c.column}\`</span> ${c.definition.replace(/^`[^`]+`\s+/, '')};</div>`;
+                });
+            }
+
+            if (modCount) {
+                html += `<div class="migration-section-title">⚙️ Columns to MODIFY</div>`;
+                plan.columns_to_modify.forEach(c => {
+                    html += `<div class="migration-code"><span class="kw">ALTER TABLE</span> <span class="tbl">\`${c.table}\`</span> <span class="kw">MODIFY COLUMN</span> <span class="col">\`${c.column}\`</span> ${c.definition.replace(/^`[^`]+`\s+/, '')};
+<span style="color:#6a9955;">-- from:</span> ${c.from.type} | null:${c.from.nullable} | default:${c.from.default === null ? 'NULL' : c.from.default}
+<span style="color:#6a9955;">-- to:  </span> ${c.to.type} | null:${c.to.nullable} | default:${c.to.default === null ? 'NULL' : c.to.default}</div>`;
+                });
+            }
+
+            if (orphanCols) {
+                html += `<div class="migration-section-title">🔵 Orphaned columns (exist in DB, not in JSON — will NOT be dropped)</div>`;
+                html += `<div class="migration-code">`;
+                plan.orphaned_columns.forEach(o => {
+                    html += `<span class="col">\`${o.table}\`.\`${o.column}\`</span><br>`;
+                });
+                html += `</div>`;
+            }
+
+            if (orphanTbls) {
+                html += `<div class="migration-section-title">🔵 Orphaned tables (exist in DB, not in JSON — will NOT be dropped)</div>`;
+                html += `<div class="migration-code">`;
+                plan.orphaned_tables.forEach(t => {
+                    html += `<span class="tbl">\`${t}\`</span><br>`;
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        async function migrationApply() {
+            if (!migrationFileText) {
+                showAlert('Please preview the migration first', 'warning');
+                return;
+            }
+            if (!confirm('Apply this migration to the database? Only ADD/MODIFY/CREATE operations will be executed. Nothing will be dropped.')) {
+                return;
+            }
+
+            const btn = document.getElementById('migrationApplyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Applying...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiRequest('migrationApply', {
+                    migration_json: migrationFileText
+                });
+
+                if (result.success) {
+                    showAlert(result.message || 'Migration applied successfully', 'success');
+                    document.getElementById('migrationApplyBtn').style.display = 'none';
+                    document.getElementById('migrationPreviewContainer').innerHTML = '';
+                    await loadTables();
+                    if (currentTable) {
+                        await loadTableInfo();
+                        await loadTableData();
+                    }
+                } else {
+                    showAlert((result.message || 'Migration failed') +
+                        (result.errors && result.errors.length ? ' — ' + result.errors.join('; ') : ''),
+                        'danger');
+                }
+            } catch (error) {
+                showAlert('Migration apply error: ' + error.message, 'danger');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
-
 </html>
