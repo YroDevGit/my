@@ -1,6 +1,7 @@
 <?php
 
 use Classes\Ctrx;
+use Classes\TCookie;
 use Tables\Devteam;
 
 Ctrx::page_rate_limit(5);
