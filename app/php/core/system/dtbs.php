@@ -62,7 +62,7 @@ function getDBConnection($driver, $host, $port, $dbname, $charSet)
 function isPostgres()
 {
     global $driver;
-    return in_array($driver, ['pgsql', 'postgres', 'postgresql']);
+    return isset(['pgsql'=>1, 'postgres'=>2, 'postgresql'=>3][$driver]);
 }
 
 function isSqlite()
@@ -74,7 +74,7 @@ function isSqlite()
 function isMysql()
 {
     global $driver;
-    return in_array($driver, ['mysql', 'mariadb']);
+    return isset(['mysql'=>1, 'mariadb'=>1][$driver]);
 }
 
 function quoteIdentifier($identifier)
