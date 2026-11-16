@@ -1276,7 +1276,7 @@ if ($route == "run" || $route == "server") {
     include "app/php/core/partials/backend.php";
     try {
         $pdo = pdo($dbname, true);
-        $stmnt = $pdo->prepare("Create database `$dbname`;");
+        $stmnt = $pdo->prepare("Create database $dbname;");
         $stmnt->execute();
         $rowcount = $stmnt->rowCount();
         echo "✔️ Database $dbname created\n\n";

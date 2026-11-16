@@ -10,6 +10,7 @@ services:
       - .:/var/www/html
     depends_on:
       - docker_db
+      - docker_pg
       - docker_redis
     environment:
       - REDIS_HOST=ctrx_redis
@@ -18,9 +19,29 @@ services:
       - REDIS_DATABASE=0
       - REDIS_TIMEOUT=0.2
 
+      - PG_HOST=ctrx_pg
+      - PG_PORT=5432
+      - PG_DATABASE=ctrx
+      - PG_USERNAME=ctrx
+      - PG_PASSWORD=password
+
+  docker_pg:
+    image: postgres:16-alpine
+    container_name: ctrx_pg
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Manila
+      POSTGRES_DB: ctrx
+      POSTGRES_USER: ctrx
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ctrx_pg_data:/var/lib/postgresql/data
+
   docker_db:
     image: mariadb:10.11
-    container_name: ctrx_db_personal
+    container_name: personalDB
     restart: unless-stopped
     environment:
       TZ: Asia/Manila
@@ -46,6 +67,7 @@ services:
       retries: 5
 
 volumes:
+  ctrx_pg_data:
   ctrx_db_data:
   ctrx_redis_data:  
 

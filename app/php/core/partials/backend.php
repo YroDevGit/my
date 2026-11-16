@@ -6,6 +6,7 @@ if (! function_exists("pdo")) {
     function pdo(string|null|array $db = null, $no_database = false)
     {
         static $pdo = null;
+        static $charsST = "";
         try {
             if (is_array($db)) {
                 $host = $db['host'] ?? "localhost";
@@ -14,7 +15,10 @@ if (! function_exists("pdo")) {
                 $driver = $db['driver'] ?? "mysql";
                 $dbname = $db['database'];
                 $dbport = $db['port'] ?? "3306";
-                $charSet = $db['charset'] ?? env('dbcharset') ?? "utf8mb4";
+                $charSet = $db['charset'] ?? env('dbcharset');
+                if(! $charsST && $charSet){
+                    $charsST = "charset=$charSet;";
+                }
                 $pdoDriver = ($driver === 'mariadb') ? 'mysql' : $driver;
                 if (! $dbname) {
                     $ms = "No database found. please check DB()";
@@ -27,7 +31,7 @@ if (! function_exists("pdo")) {
                 }
 
                 if ($pdo == null) {
-                    $pdo = new PDO("$pdoDriver:host=$host;port=$dbport;dbname=$dbname;charset=$charSet;", "$user", "$pass", [
+                    $pdo = new PDO("$pdoDriver:host=$host;port=$dbport;dbname=$dbname;$charsST", "$user", "$pass", [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                         PDO::ATTR_EMULATE_PREPARES => false,
@@ -40,7 +44,10 @@ if (! function_exists("pdo")) {
             $user =  env('dbuser');
             $pass = env('dbpass');
             $port = env('dbport');
-            $charSet = env('dbcharset') ?? "utf8mb4";
+            $charSet = env('dbcharset');
+            if(! $charsST && $charSet){
+                $charsST = "charset=$charSet;";
+            }
             $dbname = $db == null ? env('database') : $db;
             if ($dbname == "" || $dbname == null) {
                 $ms = "No database found. please check .env file";
@@ -58,7 +65,7 @@ if (! function_exists("pdo")) {
                 if ($no_database) {
                     $ddb = "";
                 }
-                $pdo = new PDO("$pdoDriver:host=$host;port=$port;".$ddb."charset=$charSet;", "$user", "$pass", [
+                $pdo = new PDO("$pdoDriver:host=$host;port=$port;".$ddb.$charsST, "$user", "$pass", [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
