@@ -28,7 +28,6 @@ if($memory = TCookie::get("remember")){
 
 <body class="min-vh-100 d-flex align-items-center justify-content-center p-3">
 
-  <div id="popm" popmodal-title="This is the day" popmodal-footer="aw">
     <div class="login-card p-4 p-md-5">
 
       <!-- back to home -->
@@ -120,7 +119,7 @@ if($memory = TCookie::get("remember")){
         Don't have an account? <a href="#" class="signup-link">Sign up free</a>
       </p>
     </div>
-  </div>
+
 
   <?= _bootstrap_js() ?>
   <?= js() ?>

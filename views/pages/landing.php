@@ -4,7 +4,7 @@ use Classes\Ctrx;
 use Classes\TCookie;
 use Tables\Devteam;
 
-Ctrx::page_rate_limit(5);
+Ctrx::page_rate_limit(10);
 
 $devs = Devteam::getAll();
 ?>
